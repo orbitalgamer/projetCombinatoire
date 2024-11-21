@@ -15,8 +15,7 @@ def lire_fichier(file):
     
     return matrix
 
-def écrire_fichier(file,matrix):
-    matrix=Transforme_matrix(matrix)
+def ecrire_fichier(file,matrix,P):
     with open(file, "w") as f:
         Sh=matrix.shape
         for i in range (Sh[0]):
@@ -26,15 +25,12 @@ def écrire_fichier(file,matrix):
                     f.write(f" ")
             f.write(f"\n")
                 
+        S=fobj2(matrix, P)
         
-        
-def Transforme_matrix(M):
-    Sh=M.shape
-    for i in range (Sh[0]):
-        for j in range (Sh[1]):
-            if M[i,j]<0:
-                M[i,j]=-1
-            else:
-                M[i,j]=1
-    return M
-        
+        for i in range(len(S)):
+            f.write(f"{S[i]}\n")
+
+def fobj2(M,P,tol=1e-14):
+  sing_values = np.linalg.svd(P*np.sqrt(M), compute_uv=False) # Calcul des valeurs singulières de la matrice P.*sqrt(M)
+  ind_nonzero = np.where(sing_values > tol)[0]                # indices des valeurs > tolérance donnée
+  return sing_values[0:ind_nonzero]  
