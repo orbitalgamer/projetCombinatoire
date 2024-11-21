@@ -1,6 +1,6 @@
 import numpy as np
 
-def croisement__elem_1_2(parent1, parent2):
+def croisement_elem_1_2(parent1, parent2):
     """
     Croise deux matrices (parent1 et parent2) pour produire deux enfants.
     Les deux matrices doivent avoir la même forme.
