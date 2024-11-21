@@ -19,14 +19,14 @@ def ecrire_fichier(file,matrix,P):
     def fobj2(M,P,tol=1e-14):
       sing_values = np.linalg.svd(P*np.sqrt(M), compute_uv=False)
       ind_nonzero = np.where(sing_values > tol)[0]                
-      return sing_values[0:ind_nonzero]  
+      return sing_values[ind_nonzero]  
   
     
     with open(file, "w") as f:
         Sh=matrix.shape
         for i in range (Sh[0]):
             for j in range (Sh[1]):
-                f.write(f"{int(matrix[i,j])}")
+                f.write(f"{int(P[i,j])}")
                 if j!= Sh[1]-1:
                     f.write(f" ")
             f.write(f"\n")
@@ -36,3 +36,10 @@ def ecrire_fichier(file,matrix,P):
         for i in range(len(S)):
             f.write(f"{S[i]}\n")
 
+def LEDM (n,m):
+    M=np.zeros((n,m))
+    
+    for i in range(n):
+        for j in range(m):
+            M[i,j]=(i-j)**2
+    return M
