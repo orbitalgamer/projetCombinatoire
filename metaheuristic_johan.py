@@ -50,7 +50,8 @@ print(matrix)
 pattern=np.ones(matrix.shape)
 
 print(fobj(matrix,pattern))
-print(fobj(matrix,recherche_locale(matrix, pattern,la_totale=True)))
+pattern=recherche_locale(matrix, pattern,la_totale=True)
+print(fobj(matrix,pattern))
 
 
 utils.ecrire_fichier("solution.txt",matrix,pattern)
