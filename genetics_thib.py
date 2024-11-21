@@ -1,10 +1,11 @@
 import random
 import numpy as np
 
-from opti_combi_projet_pythoncode_texte import fobj,compareP1betterthanP2
+from opti_combi_projet_pythoncode_texte import fobj,compareP1betterthanP2,matrices1_ledm
 import utils
 
-reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
+#reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
+reel_matrix = matrices1_ledm(25)
 
 def local_search(matrice_init,voisinage):
     new_matrice = matrice_init
@@ -36,12 +37,12 @@ def random_matrix(n):
 
 def genetique(parents,voisinage,list_methode_cross,mutation_rate,memetique,time):
     best_matrice = parents[0]
-    for i in range(time):
+    for t in range(time):
         if len(parents) != 100:
             pass
         random.shuffle(parents)
         #Creation enfants
-        methode_cross = list_methode_cross[i%2]
+        methode_cross = list_methode_cross[t%len(list_methode_cross)]
         enfants : list = methode_cross(parents)
 
         enfants,enfants_mute = enfants[:int(len(enfants)*mutation_rate)],enfants[int(len(enfants)*mutation_rate):]
@@ -64,9 +65,10 @@ def genetique(parents,voisinage,list_methode_cross,mutation_rate,memetique,time)
         # Sélection des meilleurs sujets
         parents = [(fobj(reel_matrix, parent), parent) for parent in parents]
         parents = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[:len(parents) // 2]]
-
+        print(f"{t} sur {time}")
         if compareP1betterthanP2(reel_matrix,parents[0],best_matrice):
             best_matrice = parents[0]
+            print(f"improve")
 
     count_dict = {}
     for matrice in parents:
@@ -134,7 +136,94 @@ def cross_by_vertical_split(parents):
     random.shuffle(enfants)
     return enfants
 
+def cross_by_blocks(parents):
+    enfants = []
+    # Couple de parents
+    for i in range(0, len(parents) - 1, 2):
+        parent1, parent2 = parents[i], parents[i + 1]
+        
+        # Initialisation des enfants
+        enfant1 = np.zeros_like(parent1)
+        enfant2 = np.zeros_like(parent2)
+        
+        # Dimensions de la matrice
+        mid_row = parent1.shape[0] // 2
+        mid_col = parent1.shape[1] // 2
+        
+        # Enfant 1 : mélange de blocs
+        enfant1[:mid_row, :mid_col] = parent1[:mid_row, :mid_col]  # Haut-gauche de parent1
+        enfant1[mid_row:, mid_col:] = parent2[mid_row:, mid_col:]  # Bas-droite de parent2
+        enfant1[:mid_row, mid_col:] = parent2[:mid_row, mid_col:]  # Haut-droite de parent2
+        enfant1[mid_row:, :mid_col] = parent1[mid_row:, :mid_col]  # Bas-gauche de parent1
+        
+        # Enfant 2 : inverse des blocs
+        enfant2[:mid_row, :mid_col] = parent2[:mid_row, :mid_col]  # Haut-gauche de parent2
+        enfant2[mid_row:, mid_col:] = parent1[mid_row:, mid_col:]  # Bas-droite de parent1
+        enfant2[:mid_row, mid_col:] = parent1[:mid_row, mid_col:]  # Haut-droite de parent1
+        enfant2[mid_row:, :mid_col] = parent2[mid_row:, :mid_col]  # Bas-gauche de parent2
+        
+        # Ajouter les enfants à la liste
+        enfants.append(enfant1)
+        enfants.append(enfant2)
     
+    # Mélanger les enfants pour plus de diversité
+    random.shuffle(enfants)
+    return enfants
+
+def cross_by_alternating_rows(parents):
+    enfants = []
+    # Couple de parents
+    for i in range(0, len(parents) - 1, 2):
+        parent1, parent2 = parents[i], parents[i + 1]
+        
+        # Initialisation des enfants
+        enfant1 = np.zeros_like(parent1)
+        enfant2 = np.zeros_like(parent2)
+        
+        # Alterner les lignes
+        for j in range(parent1.shape[0]):
+            if j % 2 == 0:
+                enfant1[j, :] = parent1[j, :]
+                enfant2[j, :] = parent2[j, :]
+            else:
+                enfant1[j, :] = parent2[j, :]
+                enfant2[j, :] = parent1[j, :]
+        
+        # Ajouter les enfants à la liste
+        enfants.append(enfant1)
+        enfants.append(enfant2)
+    
+    # Mélanger les enfants pour plus de diversité
+    random.shuffle(enfants)
+    return enfants
+
+def cross_by_alternating_line(parents):
+    enfants = []
+    # Couple de parents
+    for i in range(0, len(parents) - 1, 2):
+        parent1, parent2 = parents[i], parents[i + 1]
+        
+        # Initialisation des enfants
+        enfant1 = np.zeros_like(parent1)
+        enfant2 = np.zeros_like(parent2)
+        
+        # Alterner les lignes
+        for j in range(parent1.shape[1]):
+            if j % 2 == 0:
+                enfant1[:, j] = parent1[:, j]
+                enfant2[:, j] = parent2[:, j]
+            else:
+                enfant1[:, j] = parent2[:, j]
+                enfant2[:, j] = parent1[:, j]
+        
+        # Ajouter les enfants à la liste
+        enfants.append(enfant1)
+        enfants.append(enfant2)
+    
+    # Mélanger les enfants pour plus de diversité
+    random.shuffle(enfants)
+    return enfants
+
 def cross_by_elem_1_2(parents):
     enfants = []
     #Couple de parents
@@ -149,7 +238,7 @@ def cross_by_elem_1_2(parents):
                     # Enfant1 prend l'élément de parent1, Enfant2 de parent2
                     enfant1[j][k] = parent1[j][k]
                     enfant2[j][k] = parent2[j][k]
-            else:
+                else:
                     # Enfant1 prend l'élément de parent2, Enfant2 de parent1
                     enfant1[j][k] = parent2[j][k]
                     enfant2[j][k] = parent1[j][k]
@@ -161,8 +250,9 @@ def cross_by_elem_1_2(parents):
 
 # o_matrix = np.random.choice([-1, 1], size=reel_matrix.shape)
 # print(fobj(reel_matrix,full_local_search(o_matrix,0)))
-list_cross = [cross_by_half_split,cross_by_vertical_split]
-print(fobj(reel_matrix,genetique(random_matrix(100),0,list_cross,0.25,True,1000)))
+list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_elem_1_2,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
+genetique_matrix = genetique(random_matrix(100),0,list_cross,0.20,True,100)
+print(fobj(reel_matrix,genetique_matrix))
 
 
 
