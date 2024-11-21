@@ -45,12 +45,12 @@ def recherche_locale(matrix,pattern,la_totale=False):
 # matrix=utils.lire_fichier("data/ledm6_matrice (1).txt")
 matrix=utils.LEDM (25,25)
 print(matrix)
+
 # pattern=np.random.choice([-1,1],size=matrix.shape)
 pattern=np.ones(matrix.shape)
-# print(pattern)
-print(fobj(matrix,pattern))
 
-print(fobj(matrix,recherche_locale(matrix, pattern,la_totale=False)))
+print(fobj(matrix,pattern))
+print(fobj(matrix,recherche_locale(matrix, pattern,la_totale=True)))
 
 
 utils.ecrire_fichier("solution.txt",matrix,pattern)
