@@ -1,1 +1,15 @@
 opti_combi_projet_pythoncode_texte.py
+*.pyc
+
+# Ignorer les dossiers __pycache__ (générés par Python)
+__pycache__/
+
+# Ignorer les fichiers créés par les IDE
+.vscode/
+.idea/
+
+# Ignorer les fichiers temporaires
+*.pyo
+*.pyd
+*.log
+
