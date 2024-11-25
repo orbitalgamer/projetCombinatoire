@@ -3,10 +3,11 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 from opti_combi_projet_pythoncode_texte import fobj,compareP1betterthanP2,matrices1_ledm
+from utils import LEDM
 import utils
 
 #reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
-reel_matrix = matrices1_ledm(25)
+reel_matrix = LEDM(20,25)
 M = reel_matrix
 
 def local_search(matrice_init,voisinage):
