@@ -43,3 +43,7 @@ def LEDM (n,m):
         for j in range(m):
             M[i,j]=(i-j)**2
     return M
+
+
+def random_matrix(m:int ,n: int, r:int):
+    return (np.random.rand(m,r)*10)@(np.random.rand(r,n)*10)
