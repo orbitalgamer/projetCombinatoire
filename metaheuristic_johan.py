@@ -1,4 +1,4 @@
-from opti_combi_projet_pythoncode_texte import fobj,compareP1betterthanP2
+from opti_combi_projet_pythoncode_texte import fobj,compareP1betterthanP2,matrices2_slackngon
 import utils
 import numpy as np
 import random
@@ -65,6 +65,7 @@ def reassemble_mat(mat,size,list_mat):
     return matrix
 # matrix=utils.lire_fichier("data/exempleslide_matrice (1).txt")
 # matrix=utils.lire_fichier("data/ledm6_matrice (1).txt")
+# matrix=matrices2_slackngon(7)
 matrix=utils.LEDM (120,120)
 print(matrix)
 
