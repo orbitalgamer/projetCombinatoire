@@ -1,5 +1,6 @@
 import numpy as np
-
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
 
 def lire_fichier(file):
     with open(file, 'r') as f:
@@ -46,4 +47,48 @@ def LEDM (n,m):
 
 
 def random_matrix(m:int ,n: int, r:int):
+
     return ((np.random.rand(m,r)*10)@(np.random.rand(r,n)*10))**2
+
+
+def optimal_k(M, max_k=5):
+    inertias = []
+    for k in range(1, max_k+1):
+        kmeans = KMeans(n_clusters=k, random_state=42)
+        kmeans.fit(M)
+        inertias.append(kmeans.inertia_)
+    
+    # Tracer la courbe de l'inertie
+    plt.plot(range(1, max_k+1), inertias, marker='o')
+    plt.title('Méthode du coude')
+    plt.xlabel('Nombre de clusters')
+    plt.ylabel('Inertie')
+    plt.show()
+
+def clustering_lines(M, n_clusters):
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    labels = kmeans.fit_predict(M)
+    return labels
+
+def clustering_columns(M, n_clusters):
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    labels = kmeans.fit_predict(M.T)
+    return labels
+
+
+def generate_initial_P(M, line_labels, col_labels,noise_prob):
+    P = np.zeros_like(M)
+    # unique_line_labels = np.unique(line_labels)
+    # unique_col_labels = np.unique(col_labels)
+    
+    for i in range(M.shape[0]):
+        for j in range(M.shape[1]):
+            P[i, j] = 1 if (line_labels[i] + col_labels[j]) % 2 == 0 else -1
+            if np.random.rand() < noise_prob:  # Avec une certaine probabilité, changer le cluster
+                P[i,j] = -P[i,j]
+    return P
+
+#Exemple call genrate_initial_p
+#line_labels = clustering_lines(M, n_clusters)
+#col_labels = clustering_columns(M, n_clusters)
+#generate_initial_P(M, line_labels, col_labels,noise_prob=0.05)
