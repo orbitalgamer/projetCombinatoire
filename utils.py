@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
 
 def lire_fichier(file):
     with open(file, 'r') as f:
@@ -48,6 +49,21 @@ def LEDM (n,m):
 def random_matrix(m:int ,n: int, r:int):
 
     return ((np.random.rand(m,r)*10)@(np.random.rand(r,n)*10))**2
+
+
+def optimal_k(M, max_k=5):
+    inertias = []
+    for k in range(1, max_k+1):
+        kmeans = KMeans(n_clusters=k, random_state=42)
+        kmeans.fit(M)
+        inertias.append(kmeans.inertia_)
+    
+    # Tracer la courbe de l'inertie
+    plt.plot(range(1, max_k+1), inertias, marker='o')
+    plt.title('Méthode du coude')
+    plt.xlabel('Nombre de clusters')
+    plt.ylabel('Inertie')
+    plt.show()
 
 def clustering_lines(M, n_clusters):
     kmeans = KMeans(n_clusters=n_clusters, random_state=42)
