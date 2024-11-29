@@ -46,6 +46,7 @@ def LEDM (n,m):
 
 
 def random_matrix(m:int ,n: int, r:int):
+
     return ((np.random.rand(m,r)*10)@(np.random.rand(r,n)*10))**2
 
 def clustering_lines(M, n_clusters):
