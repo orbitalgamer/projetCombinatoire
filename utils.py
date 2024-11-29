@@ -75,8 +75,6 @@ def clustering_columns(M, n_clusters):
     labels = kmeans.fit_predict(M.T)
     return labels
 
-def generate_initial_P(M, line_labels, col_labels,noise_prob):
-    P = np.zeros_like(M)
 
 def generate_initial_P(M, line_labels, col_labels,noise_prob):
     P = np.zeros_like(M)
