@@ -185,7 +185,7 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
         for i in range(len(list_pat)):
             list_pat[i]=funct(list_mat[i], list_pat[i],param[1],param[2],verbose)
         pattern_tmp=reassemble_mat(pattern,param[0],list_pat)
-        pattern_tmp=funct(matrix,pattern_tmp,param[1],verbose)
+        pattern_tmp=funct(matrix,pattern_tmp,param[1],param[2],verbose)
         return pattern_tmp
 
 # matrix=utils.lire_fichier("data/exempleslide_matrice (1).txt")
@@ -202,7 +202,7 @@ pattern=np.ones(matrix.shape)
 print(fobj(matrix,pattern))
 
 debug=True
-metah=0 #0 for greedy, 1 for tabu, 2 for local search
+metah=2 #0 for greedy, 1 for tabu, 2 for local search
 
 #determination meilleur parametre
 start_time=time.time()
