@@ -194,7 +194,7 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
 # matrix=matrices2_slackngon(7)
 matrix=utils.LEDM (20,20)
-# matrix=utils.random_matrix(7,7,3)
+# matrix=utils.random_matrix(20,20,2)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
 pattern=np.ones(matrix.shape)
@@ -202,7 +202,7 @@ pattern=np.ones(matrix.shape)
 print(fobj(matrix,pattern))
 
 debug=True
-metah=2 #0 for greedy, 1 for tabu, 2 for local search
+metah=0 #0 for greedy, 1 for tabu, 2 for local search
 
 #determination meilleur parametre
 start_time=time.time()
@@ -249,11 +249,11 @@ print(f"temps de calcul pour trouve param opti= {end_time-start_time}s")
 if debug:
     start_time=time.time()
     if metah==0:
-        pattern_tmp=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale),verbose=True)
+        pattern_tmp=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale_best),verbose=True)
     elif metah==1:
-        pattern_tmp=Resolve_metaheuristic(tabu,matrix,pattern,(size_best,queue_best),verbose=True)
+        pattern_tmp=Resolve_metaheuristic(tabu,matrix,pattern,(size_best,queue_best,'/'),verbose=True)
     elif metah==2:
-        pattern_tmp=Resolve_metaheuristic(recherche_locale,matrix,pattern,(size_best,'/',la_totale),verbose=True)
+        pattern_tmp=Resolve_metaheuristic(recherche_locale,matrix,pattern,(size_best,'/',la_totale_best),verbose=True)
     end_time=time.time()
     print(fobj(matrix,pattern_tmp))
     print(f"temps de calcul pour calculer solution= {end_time-start_time}s")
