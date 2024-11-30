@@ -76,10 +76,10 @@ def clustering_columns(M, n_clusters):
     return labels
 
 
-def generate_initial_P(M, line_labels, col_labels,noise_prob):
+def generate_initial_P(M, n_clusters_line, n_clusters_columns,noise_prob=0):
     P = np.zeros_like(M)
-    # unique_line_labels = np.unique(line_labels)
-    # unique_col_labels = np.unique(col_labels)
+    line_labels=clustering_lines(M,n_clusters_line)
+    col_labels=clustering_columns(M,n_clusters_columns)
     
     for i in range(M.shape[0]):
         for j in range(M.shape[1]):
@@ -88,7 +88,3 @@ def generate_initial_P(M, line_labels, col_labels,noise_prob):
                 P[i,j] = -P[i,j]
     return P
 
-#Exemple call genrate_initial_p
-#line_labels = clustering_lines(M, n_clusters)
-#col_labels = clustering_columns(M, n_clusters)
-#generate_initial_P(M, line_labels, col_labels,noise_prob=0.05)
