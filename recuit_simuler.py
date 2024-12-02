@@ -10,9 +10,13 @@ Original file is located at
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from joblib import Parallel, delayed
 
+from utils import LEDM, random_matrix
 
-from utils import LEDM
+import warnings
+warnings.filterwarnings("ignore")
 
 def matrices1_ledm(n):
   M  = np.zeros((n,n))
@@ -56,99 +60,203 @@ def metaheuristic(M):
 M = np.array([[4,0,1],[1,1,1],[1,1,0]])
 P1 = np.array([[1,1,-1],[-1,1,1],[1,-1,-1]])
 P2 = np.array([[-1,1,-1],[-1,-1,1],[1,1,-1]])
-print(compareP1betterthanP2(M,P1,P2))
-print(np.linalg.svd(P1*np.sqrt(M), compute_uv=False))
+# print(compareP1betterthanP2(M,P1,P2))
+# print(np.linalg.svd(P1*np.sqrt(M), compute_uv=False))
 
 # M = matrices2_slackngon(7)
 # P = np.array([[1,1,1,1,1,-1,1],[1,1,1,-1,1,-1,1],[1,1,1,1,1,1,-1],[1,-1,1,1,1,-1,-1],[1,1,-1,1,1,1,1],[1,-1,1,-1,-1,1,1],[1,1,1,1,1,1,1]])
 # print(fobj(M,P))
 
-Mprime = np.array([[16,4,1,25,4], [16,4,4,36,0], [0,0,9,1,4], [36,9,0,64,4], [16,4,1,25,4], [4,1,49,25,16]])
 
-Mprime=LEDM(20, 15)
+def clustering_lines(M, n_clusters):
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    labels = kmeans.fit_predict(M)
+    return labels
 
-Tinit = 100
-Tf = 1e-18
-alpha = 0.9
-best = np.zeros(Mprime.shape)
-best_rank = np.inf
-best_sing_value = np.inf
-current = np.random.choice([-1,1], size=Mprime.shape)
-# current = np.ones(Mprime.shape)
-current_rank = np.inf
-current_sing_value = np.inf
+def clustering_columns(M, n_clusters):
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    labels = kmeans.fit_predict(M.T)
+    return labels
 
-tmp = np.ones(Mprime.shape)
-
-previous_score = np.inf
-
-palier = 500
-
-n_permut = 10
-
-superPalier = 100
-superPalierCount = 0
-
-alltest = []
-
-Temperature = Tinit
-while Temperature>Tf:
-    tmp = current.copy() #backup
+def generate_initial_P(M, n_cluster):
+    line_labels = clustering_lines(M, n_clusters=n_cluster)
+    col_labels = clustering_columns(M, n_clusters=n_cluster)
+    P = np.zeros_like(M)
     
-    for _ in range(palier):
-        choix= random.randrange(4)
-        if choix == 0:    
-            i = random.randrange(current.shape[0])
-            j = random.randrange(current.shape[1])
-            tmp[i,j] *= -1
-        elif choix == 1:
-            i = random.randrange(current.shape[0])
-            tmp[i,:] *= -1
-        elif choix == 2:
-            j = random.randrange(current.shape[1])
-            tmp[:,j] *= -1
-  
-        # tmp  = np.random.choice([-1,1], size=Mprime.shape)
-        tmp_rank, tmp_sing_value = fobj(Mprime, tmp)
-        alltest.append(tmp_sing_value)
+    for i in range(M.shape[0]):
+        for j in range(M.shape[1]):
+            P[i, j] = 1 if (line_labels[i] + col_labels[j]) % 2 == 0 else -1
+    return P
+
+
+def generate_P_pair_wise(M):
+    P= np.zeros(M.shape)
+    for j in range(P.shape[0]):
+        for i in range(P.shape[1]):
+            if M[j,i] != 0:
+                if (i+j)%2:
+                    P[j,i]=-1
+                else:
+                    P[j,i]=1
+    return P
+
+
+
+
+
+def recuit_simule(Mprime, Pinit=None, test=False):
+    
+    cluster = 2
+    
+    initP = generate_initial_P(Mprime, cluster)
+    # initP = generate_P_pair_wise(Mprime)
+    if test== True:
+        initP=Pinit
+    
+    Tinit = 100
+    Tf = 1e-8
+    alpha = 0.9
+    best = np.zeros(Mprime.shape)
+    best_rank = np.inf
+    best_sing_value = np.inf
+    current = initP.copy()
+    # current = np.ones(Mprime.shape)
+    current_rank = np.inf
+    current_sing_value = np.inf
+    
+    tmp = np.ones(Mprime.shape)
+    
+    previous_score = np.inf
+    
+    palier = 500
+    
+    n_permut = 1
+    
+    superPalier = 40
+    superPalierCount = 0
+    
+    alltest = []
+    
+    amelioration = 0
+    
+    Temperature = Tinit
+    while Temperature>Tf:
+        tmp = current.copy() #backup
         
-        #si meilleur stock
-        if tmp_rank<current_rank or (tmp_rank == current_rank and tmp_sing_value<=current_sing_value):
-            # print("here")
-            current = tmp.copy()
-            current_rank = tmp_rank
-            current_sing_value = tmp_sing_value
-        else:
-            if tmp_rank == current_rank:
-                proba = np.exp(-((tmp_sing_value-current_sing_value)/current_sing_value)/Temperature)
-                # print(((tmp_sing_value-current_sing_value)/current_sing_value))
-            else:
-                proba = np.exp(-(tmp_rank-current_rank)*10/Temperature)
-                
-            #     print((tmp_rank-current_rank)*10)
-            # print(proba, Temperature)
-            if random.random() < proba:#accepta alors
+        for _ in range(palier):
+            choix= random.randrange(3)
+            choix = 0
+            if choix == 0:    
+                i = random.randrange(current.shape[0])
+                j = random.randrange(current.shape[1])
+                tmp[i,j] *= -1
+            elif choix == 1:
+                i = random.randrange(current.shape[0])
+                tmp[i,:] *= -1
+            elif choix == 2:
+                j = random.randrange(current.shape[1])
+                tmp[:,j] *= -1
+      
+            # tmp  = np.random.choice([-1,1], size=Mprime.shape)
+            tmp_rank, tmp_sing_value = fobj(Mprime, tmp)
+            alltest.append(tmp_sing_value)
+            
+            #si meilleur stock
+            if tmp_rank<current_rank or (tmp_rank == current_rank and tmp_sing_value<=current_sing_value):
+                # print("here")
                 current = tmp.copy()
                 current_rank = tmp_rank
                 current_sing_value = tmp_sing_value
-                
-        #stock le best
-        if best_rank>current_rank or (best_rank == current_rank and best_sing_value>current_sing_value):
-            best = current.copy()
-            best_rank = current_rank
-            best_sing_value = current_sing_value
-            print(f" better found !  best_rank={best_rank}, best_sing = {best_sing_value}")
-    Temperature *= alpha
-    if(superPalierCount < superPalier and not Temperature>Tf):
-        Temperature=Tinit
-        superPalierCount+=1
-        print(f"new palier and current rank = {current_rank} and best_rank={best_rank}, best_sing = {best_sing_value}")
-
-    # print(f"Temperature = {Temperature}, current rank = {current_rank}, best_rank={best_rank}, best_sing = {best_sing_value}")
+            else:
+                if tmp_rank == current_rank:
+                    proba = np.exp(-((tmp_sing_value-current_sing_value)*10/current_sing_value)/Temperature)
+                    # print(((tmp_sing_value-current_sing_value)/current_sing_value))
+                else:
+                    proba = np.exp(-(tmp_rank-current_rank)*10/Temperature)
+                    
+                #     print((tmp_rank-current_rank)*10)
+                # print(proba, Temperature)
+                if random.random() < proba:#accepta alors
+                    current = tmp.copy()
+                    current_rank = tmp_rank
+                    current_sing_value = tmp_sing_value
+                    
+            #stock le best
+            if best_rank>current_rank or (best_rank == current_rank and best_sing_value>current_sing_value):
+                best = current.copy()
+                best_rank = current_rank
+                best_sing_value = current_sing_value
+                print(f" better found !  best_rank={best_rank}, best_sing = {best_sing_value}")
+                amelioration =0
+        # if best_rank == 2:
+        #     break
+        amelioration+=1
+        if amelioration > 5: #recharge meilleur si avance plus
+            current=best.copy()
+            current_sing_value = best_sing_value
+            current_rank = best_rank
+            amelioration=0
+            # print("rechargement")
+            
+        Temperature *= alpha
+        if(superPalierCount < superPalier and not Temperature>Tf):
+            Temperature=Tinit
+            superPalierCount+=1
+            print(f"new palier and current rank = {current_rank} and best_rank={best_rank}, best_sing = {best_sing_value}")
     
-print(f"best_rank = {best_rank} avec sing value = {best_sing_value}")
+        # print(f"Temperature = {Temperature}, current rank = {current_rank}, best_rank={best_rank}, best_sing = {best_sing_value}")
+    return best
+# print(f"best_rank = {best_rank} avec sing value = {best_sing_value}")
+# print(best)
 
 
+def split_matrix_into_blocks(M):
+    """
+    Découpe la matrice M en 4 sous-matrices de taille approximativement égale.
+    Retourne les sous-matrices A, B, C, D.
+    """
+    rows, cols = M.shape
+    mid_row, mid_col = rows // 2, cols // 2  # Calcul des indices centraux
     
-        
+    # Découpage en blocs
+    A = M[:mid_row, :mid_col]      # Haut gauche
+    B = M[:mid_row, mid_col:]      # Haut droit
+    C = M[mid_row:, :mid_col]      # Bas gauche
+    D = M[mid_row:, mid_col:]      # Bas droit
+    
+    return A, B, C, D
+
+
+Mprime = np.array([[16,4,1,25,4], [16,4,4,36,0], [0,0,9,1,4], [36,9,0,64,4], [16,4,1,25,4], [4,1,49,25,16]])
+
+Mprime=LEDM(7, 7)
+
+Mprime = random_matrix(10,10,1)
+
+
+# print("start")
+# chunks = split_matrix_into_blocks(Mprime)  # adjust chunk size based on available cores
+
+# results = Parallel(n_jobs=4)(delayed(recuit_simule)(chunk) for chunk in chunks)
+
+# print("end")
+
+# top = np.hstack((results[0], results[1]))
+# bottom = np.hstack((results[2], results[3]))
+# Ptotal= np.vstack((top, bottom))
+
+
+# # Ptotal = np.array(zip(**results))
+# # print(Ptotal)
+# total_rank, total_sing_value = fobj(Mprime, Ptotal)
+Ptotal = np.zeros((1,1))
+best_p = recuit_simule(Mprime, Ptotal.copy(), False)
+
+total_rank_2, total_sing_value_2 = fobj(Mprime, best_p)
+# print(f"avant recuit best_rank = {total_rank} avec sing value = {total_sing_value}")
+print(f"après recuit best_rank = {total_rank_2} avec sing value = {total_sing_value_2}")
+
+
+
+
     
