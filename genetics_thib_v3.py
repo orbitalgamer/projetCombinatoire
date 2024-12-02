@@ -9,7 +9,8 @@ import utils
 #reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/ledm6_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
-reel_matrix = LEDM(20,20)
+reel_matrix = LEDM(4,120)
+#reel_matrix = reel_matrix.transpose()
 #reel_matrix = matrices2_slackngon(7)
 #reel_matrix = random_matrix(25,25,5)
 M = reel_matrix
@@ -31,7 +32,7 @@ def reassemble_matrix(M_list):
     bottom = np.hstack((A21, A22))
     return np.vstack((top, bottom))
 
-def local_search_random_unique(M,matrice_init, voisinage, max_attempts=500):
+def local_search_random_unique(M,matrice_init, voisinage, max_attempts=100):
     """
     Recherche locale aléatoire avec évitement des répétitions.
 
@@ -131,14 +132,14 @@ def generate_initial_P(M, line_labels, col_labels,noise_prob):
                 P[i,j] = -P[i,j]
     return P
 
-def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,time,max_depth,n_parents, parent_init = None):
+def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,time,max_depth,n_parents, parent_init = None,method_next_gen = "Best"):
     if parent_init is None:
         # Clustering des lignes et des colonnes
         line_labels = clustering_lines(M, n_clusters)
         col_labels = clustering_columns(M, n_clusters)
         
         # Générer la population initiale
-        parents = [ generate_initial_P(M, line_labels, col_labels,noise_prob=0.05) for i in range(n_parents)]
+        parents = [ generate_initial_P(M, line_labels, col_labels,noise_prob=0.00) for i in range(n_parents)]
         #parents += [generate_initial_P(M, line_labels, col_labels,noise_prob=0.05) for _ in range(50)]
     elif parent_init[0] is None:
         parents = parent_init[1]
@@ -173,8 +174,30 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
         parents += enfants
 
         # Sélection des meilleurs sujets
-        parents = [(fobj(M, parent), parent) for parent in parents]
-        parents = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[:len(parents) // 2]]
+        
+        if method_next_gen == "Best":
+            parents = [(fobj(M, parent), parent) for parent in parents]
+            parents = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[:len(parents) // 2]]
+        # elif method_next_gen =="Weels":
+        #     for i,parent in enumerate (parents):
+        #         if parent[0][0] != parents[0][0][0]:
+        #             end_of_best = i
+        #             break
+        #     pass
+        elif method_next_gen == "Tournament":
+            random.shuffle(parents)
+            new_parents = []
+            for i in range(0,len(parents),2):
+                if compareP1betterthanP2(M, parents[i], parents[i+1]):
+                    new_parents.append(parents[i])
+                else:
+                    new_parents.append(parents[i+1])
+            parents = new_parents.copy()
+                
+                
+
+
+
         print(f"{t} sur {time}")
         if compareP1betterthanP2(M,parents[0],best_matrice):
             best_matrice = parents[0].copy()
@@ -191,7 +214,7 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
     return best_matrice
 
 import matplotlib.pyplot as plt
-def optimal_k(M, max_k=5):
+def optimal_k(M, max_k=10):
     inertias = []
     for k in range(1, max_k+1):
         kmeans = KMeans(n_clusters=k, random_state=42)
@@ -445,7 +468,7 @@ def recherche_kmins(M,n_clusters,max_iter):
 # o_matrix = np.random.choice([-1, 1], size=M.shape)
 # print(fobj(M,full_local_search(o_matrix,0)))
 list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_elem_1_2,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
-M_list = divide_matrix(M)
+#M_list = divide_matrix(M)
 list_sol = list()
 
 # for elem in M_list:
@@ -454,17 +477,17 @@ list_sol = list()
 # sol =  reassemble_matrix(list_sol)
 # print(fobj(reel_matrix,sol))
 # genetique_matrix = genetique(M,2,0,list_cross,0.20,True,50,10   ,n_parents = 100, parent_init = sol)
-liste_parent = [None]
-for i in range(1):
-    liste_parent.append(_random_matrix(100))
-genetique_matrix = genetique(M,2,0,list_cross,0.25,True,100,max_depth=10   ,n_parents = 50,parent_init=liste_parent)
+# liste_parent = [None]
+# for i in range(1):
+# #     liste_parent.append(_random_matrix(100))
+genetique_matrix = genetique(M,2,0,list_cross,0.20,True,100,max_depth=10   ,n_parents = 100,parent_init=None,method_next_gen="Tournament")
 print(fobj(M,genetique_matrix))
 
 # print(fobj(reel_matrix,sol))
 
 # VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
 # print(fobj(M,VNS_matrix))
-# VNS_matrix = VNS(M,2,0,2000,max_depth = 100)
+# VNS_matrix = VNS(M,2,0,2000,max_depth = 10)
 # print(fobj(M,VNS_matrix))
 
 # k_mins_search = recherche_kmins(M, 2, 1000)

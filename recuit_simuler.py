@@ -15,6 +15,8 @@ from joblib import Parallel, delayed
 
 from utils import LEDM, random_matrix
 
+from metaheuristic_johan import init_johan
+
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -38,10 +40,14 @@ def matrices2_slackngon(n):
       M[i,0] = 0
   return M
 
-def fobj(M,P,tol=1e-14):
+def fobj(M,P,tol=1e-14, all_sng=False):
   sing_values = np.linalg.svd(P*np.sqrt(M), compute_uv=False) # Calcul des valeurs singulières de la matrice P.*sqrt(M)
   ind_nonzero = np.where(sing_values > tol)[0]                # indices des valeurs > tolérance donnée
+  if all_sng:
+    print(f"all singular martrix {sing_values[np.where(sing_values > tol)]}")
   return len(ind_nonzero), sing_values[ind_nonzero[-1]]       # on retourne objectif1=rang et objectif2=plus petite val sing. non-nulle
+
+
 
 def compareP1betterthanP2(M,P1,P2):
   r1, s1 = fobj(M,P1) #on récupère les deux objectifs pour le pattern P1
@@ -110,11 +116,12 @@ def recuit_simule(Mprime, Pinit=None, test=False):
     
     initP = generate_initial_P(Mprime, cluster)
     # initP = generate_P_pair_wise(Mprime)
+    # initP = init_johan(Mprime, initP, 2)
     if test== True:
         initP=Pinit
     
     Tinit = 100
-    Tf = 1e-8
+    Tf = 1e-6
     alpha = 0.9
     best = np.zeros(Mprime.shape)
     best_rank = np.inf
@@ -187,6 +194,7 @@ def recuit_simule(Mprime, Pinit=None, test=False):
                 best_rank = current_rank
                 best_sing_value = current_sing_value
                 print(f" better found !  best_rank={best_rank}, best_sing = {best_sing_value}")
+                # fobj(Mprime, best, all_sng=True)
                 amelioration =0
         # if best_rank == 2:
         #     break
@@ -203,7 +211,7 @@ def recuit_simule(Mprime, Pinit=None, test=False):
             Temperature=Tinit
             superPalierCount+=1
             print(f"new palier and current rank = {current_rank} and best_rank={best_rank}, best_sing = {best_sing_value}")
-    
+            
         # print(f"Temperature = {Temperature}, current rank = {current_rank}, best_rank={best_rank}, best_sing = {best_sing_value}")
     return best
 # print(f"best_rank = {best_rank} avec sing value = {best_sing_value}")
@@ -229,9 +237,9 @@ def split_matrix_into_blocks(M):
 
 Mprime = np.array([[16,4,1,25,4], [16,4,4,36,0], [0,0,9,1,4], [36,9,0,64,4], [16,4,1,25,4], [4,1,49,25,16]])
 
-Mprime=LEDM(7, 7)
+Mprime=LEDM(4, 120)
 
-Mprime = random_matrix(10,10,1)
+# Mprime = random_matrix(32,32,10)
 
 
 # print("start")
