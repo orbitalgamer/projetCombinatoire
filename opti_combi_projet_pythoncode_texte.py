@@ -30,7 +30,7 @@ def matrices2_slackngon(n):
       M[i,0] = 0
   return M
 
-def fobj(M,P,tol=1e-14):
+def fobj(M,P,tol=1e-10):
   sing_values = np.linalg.svd(P*np.sqrt(M), compute_uv=False) # Calcul des valeurs singulières de la matrice P.*sqrt(M)
   ind_nonzero = np.where(sing_values > tol)[0]                # indices des valeurs > tolérance donnée
   return len(ind_nonzero), sing_values[ind_nonzero[-1]]       # on retourne objectif1=rang et objectif2=plus petite val sing. non-nulle

@@ -19,8 +19,8 @@ def lire_fichier(file):
 def ecrire_fichier(file,matrix,P):
     def fobj2(M,P,tol=1e-14):
       sing_values = np.linalg.svd(P*np.sqrt(M), compute_uv=False)
-      ind_nonzero = np.where(sing_values > tol)[0]                
-      return sing_values[ind_nonzero]  
+    #   ind_nonzero = np.where(sing_values > tol)[0]                
+      return sing_values  
   
     
     with open(file, "w") as f:

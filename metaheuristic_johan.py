@@ -4,6 +4,7 @@ import numpy as np
 import random
 import copy
 import time
+from joblib import Parallel,delayed
 
 def perm(type: int,mat:np.ndarray,index: int,index2=None):
     mat_tmp=copy.deepcopy(mat)
@@ -193,7 +194,7 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 # matrix=utils.lire_fichier("data/correl5_matrice.txt")
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
 # matrix=matrices2_slackngon(7)
-matrix=utils.LEDM (20,20)
+matrix=utils.LEDM (120,120)
 # matrix=utils.random_matrix(20,20,2)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
@@ -202,52 +203,59 @@ pattern=np.ones(matrix.shape)
 print(fobj(matrix,pattern))
 
 debug=True
-metah=2 #0 for greedy, 1 for tabu, 2 for local search
+best_param=False
+metah=0 #0 for greedy, 1 for tabu, 2 for local search
 
-#determination meilleur parametre
-start_time=time.time()
-pattern_best=copy.deepcopy(pattern)
-if metah==0:
-    for la_totale in [False,True]:
-        for setup_break in range(4):
+
+if best_param:
+    #determination meilleur parametre
+    start_time=time.time()
+    pattern_best=copy.deepcopy(pattern)
+    if metah==0:
+        for la_totale in [False,True]:
+            for setup_break in range(4):
+                for size in range(2,max(matrix.shape)+1):
+                    pattern_tmp=Resolve_metaheuristic(greedy,matrix,pattern,(size,setup_break,la_totale))
+                    if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                        pattern_best=copy.deepcopy(pattern_tmp)
+                        size_best=size
+                        setup_break_best=setup_break
+                        la_totale_best=la_totale
+                        print(f"for param size={size}, setup_break={setup_break} and la_totale={la_totale} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+                
+        print(f"param opti: size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best}")
+    elif metah==1:
+        for queue in range(1,11):
             for size in range(2,max(matrix.shape)+1):
-                pattern_tmp=Resolve_metaheuristic(greedy,matrix,pattern,(size,setup_break,la_totale))
+                pattern_tmp=Resolve_metaheuristic(tabu,matrix,pattern,(size,queue))
                 if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
                     pattern_best=copy.deepcopy(pattern_tmp)
                     size_best=size
-                    setup_break_best=setup_break
-                    la_totale_best=la_totale
-                    print(f"for param size={size}, setup_break={setup_break} and la_totale={la_totale} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
-            
-    print(f"param opti: size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best}")
-elif metah==1:
-    for queue in range(1,11):
-        for size in range(2,max(matrix.shape)+1):
-            pattern_tmp=Resolve_metaheuristic(tabu,matrix,pattern,(size,queue))
-            if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
-                pattern_best=copy.deepcopy(pattern_tmp)
-                size_best=size
-                queue_best=queue
-                print(f"for param size={size} and queue={queue} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
-    print(f"param opti: size={size_best} and queue={queue_best}")
-elif metah==2:
-    for la_totale in [False,True]:
-        for size in range(2,max(matrix.shape)+1):
-            pattern_tmp=Resolve_metaheuristic(recherche_locale,matrix,pattern,(size,'/',la_totale))
-            if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
-                    pattern_best=copy.deepcopy(pattern_tmp)
-                    size_best=size
-                    la_totale_best=la_totale
-                    print(f"for param size={size} and la_totale={la_totale} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
-    print(f"param opti: size={size_best} and la_totale={la_totale_best}")
+                    queue_best=queue
+                    print(f"for param size={size} and queue={queue} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+        print(f"param opti: size={size_best} and queue={queue_best}")
+    elif metah==2:
+        for la_totale in [False,True]:
+            for size in range(2,max(matrix.shape)+1):
+                pattern_tmp=Resolve_metaheuristic(recherche_locale,matrix,pattern,(size,'/',la_totale))
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                        pattern_best=copy.deepcopy(pattern_tmp)
+                        size_best=size
+                        la_totale_best=la_totale
+                        print(f"for param size={size} and la_totale={la_totale} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+        print(f"param opti: size={size_best} and la_totale={la_totale_best}")
 
-print(fobj(matrix,pattern_best))
+    print(fobj(matrix,pattern_best))
 
-end_time=time.time()
-print(f"temps de calcul pour trouve param opti= {end_time-start_time}s")
+    end_time=time.time()
+    print(f"temps de calcul pour trouve param opti= {end_time-start_time}s")
 
 if debug:
     start_time=time.time()
+    if not best_param:
+        size_best=12
+        setup_break_best=0 #0,1,2 or 3
+        la_totale_best=True #True or False
     if metah==0:
         pattern_tmp=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale_best),verbose=True)
     elif metah==1:
@@ -258,6 +266,6 @@ if debug:
     print(fobj(matrix,pattern_tmp))
     print(f"temps de calcul pour calculer solution= {end_time-start_time}s")
 
-utils.ecrire_fichier("solution.txt",matrix,pattern_best)
+utils.ecrire_fichier("solution.txt",matrix,pattern_tmp)
 
     
