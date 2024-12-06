@@ -1,22 +1,34 @@
+import copy
+import itertools
 import random
+import time
+from joblib import Parallel, delayed
 import numpy as np
 from sklearn.cluster import KMeans
 
 from opti_combi_projet_pythoncode_texte import fobj,compareP1betterthanP2,matrices1_ledm,matrices2_slackngon
 from utils import LEDM,lire_fichier,random_matrix
 import utils
+from sklearn.decomposition import PCA
+
 
 #reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/ledm6_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
-reel_matrix = LEDM(4,120)
+reel_matrix = LEDM(120,120)
 #reel_matrix = reel_matrix.transpose()
-#reel_matrix = matrices2_slackngon(7)
-#reel_matrix = random_matrix(25,25,5)
+#reel_matrix = matrices2_slackngon(16)
+#reel_matrix = random_matrix(25,25,2)
 M = reel_matrix
 
+def divide_matrix_line(matrix):
+    m,n = matrix.shape
+    m= m//2
+    A1 = matrix[:m,:]
+    
+    
 
-def divide_matrix(matrix):
+def divide_matrix_block(matrix):
     m, n = matrix.shape
     m2, n2 = m // 2, n // 2
     A11 = matrix[:m2, :n2]
@@ -26,7 +38,7 @@ def divide_matrix(matrix):
     return A11, A12, A21, A22
 
 # Fonction pour réassembler 4 sous-matrices
-def reassemble_matrix(M_list):
+def reassemble_matrix_block(M_list):
     A11, A12, A21, A22 = M_list
     top = np.hstack((A11, A12))
     bottom = np.hstack((A21, A22))
@@ -64,7 +76,7 @@ def local_search_random_unique(M,matrice_init, voisinage, max_attempts=100):
         new_matrice[i][j] = -new_matrice[i][j]
 
         # Comparer la nouvelle matrice à la meilleure trouvée jusqu'à présent
-        if compareP1betterthanP2(M, new_matrice, best_matrice):
+        if compareP1betterthanP2(M, new_matrice, best_matrice ):
             best_matrice = new_matrice.copy()
             #current_best_score = fobj(M, best_matrice)
         else:
@@ -81,12 +93,20 @@ def local_search_random_unique(M,matrice_init, voisinage, max_attempts=100):
 def local_search(M,matrice_init,voisinage):
     new_matrice = matrice_init.copy()
     best_matrice = new_matrice.copy()
+    stop = False
     if voisinage == 0:
         for i in range(len(matrice_init)):
+            if stop == True:
+                break
             for j in range(len(matrice_init[0])):
+                if stop == True:
+                    break
                 new_matrice[i][j] = -new_matrice[i][j]
-                if compareP1betterthanP2(M,new_matrice,matrice_init):
+                if compareP1betterthanP2(M,new_matrice,matrice_init ):
                     best_matrice = new_matrice.copy()
+                    print(fobj(M,best_matrice))
+                    stop = True
+                    break
                 new_matrice[i][j] = -new_matrice[i][j]
     return best_matrice
 
@@ -94,8 +114,8 @@ def full_local_search(M,matrice_init,voisinage,max_depth = 10):
     best_matrice = matrice_init.copy()
     for i in range(max_depth):
         new_matrice = local_search_random_unique(M,best_matrice,voisinage)
-        #new_matrice = local_search(M,best_matrice,voisinage)
-        if compareP1betterthanP2(M,new_matrice,best_matrice):
+        #♥new_matrice = local_search(M,best_matrice,voisinage)
+        if compareP1betterthanP2(M,new_matrice,best_matrice ):
             best_matrice = new_matrice.copy()
             #print("improve in full")
         else:
@@ -153,16 +173,14 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
         random.shuffle(parents)
         #Creation enfants
         methode_cross = list_methode_cross[t%len(list_methode_cross)]
-
         enfants : list = methode_cross(parents)
-
         enfants,enfants_mute = enfants[:int(len(enfants)*mutation_rate)],enfants[int(len(enfants)*mutation_rate):]
         
         
         if memetique:
-            for i in range(len(enfants_mute)//2):
+            for i in range(2):
                 enfants_mute[i] = full_local_search(M,enfants_mute[i],voisinage,max_depth)
-            for i in range(len(enfants_mute)//2, len(enfants_mute)):
+            for i in range(2,len(enfants_mute)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[0])-1)
                 enfants_mute[i][n1][n2] = -enfants_mute[i][n1][n2]
         else:
@@ -176,7 +194,7 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
         # Sélection des meilleurs sujets
         
         if method_next_gen == "Best":
-            parents = [(fobj(M, parent), parent) for parent in parents]
+            parents = [(fobj(M, parent ), parent) for parent in parents]
             parents = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[:len(parents) // 2]]
         # elif method_next_gen =="Weels":
         #     for i,parent in enumerate (parents):
@@ -188,18 +206,32 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
             random.shuffle(parents)
             new_parents = []
             for i in range(0,len(parents),2):
-                if compareP1betterthanP2(M, parents[i], parents[i+1]):
+                if compareP1betterthanP2(M, parents[i], parents[i+1] ):
                     new_parents.append(parents[i])
                 else:
                     new_parents.append(parents[i+1])
             parents = new_parents.copy()
+        elif method_next_gen == "Tournament_pro":
+            parents = [(fobj(M, parent ), parent) for parent in parents]
+            challenger = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[len(parents) // 4:3*len(parents) // 4]]
+            parents = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[:len(parents) // 4]]
+            random.shuffle(challenger)
+            new_challenger = []
+            for i in range(0,len(challenger),2):
+                if compareP1betterthanP2(M, challenger[i], challenger[i+1] ):
+                    new_challenger.append(challenger[i])
+                else:
+                    new_challenger.append(challenger[i+1])
+            parents += new_challenger 
+
+
                 
                 
 
 
 
         print(f"{t} sur {time}")
-        if compareP1betterthanP2(M,parents[0],best_matrice):
+        if compareP1betterthanP2(M,parents[0],best_matrice ):
             best_matrice = parents[0].copy()
             print(methode_cross.__name__)
             print(f"improve")
@@ -398,6 +430,189 @@ def cross_by_elem_1_2(parents):
     random.shuffle(enfants)
     return enfants
 
+def perm(type: int,mat:np.ndarray,index: int,index2=None):
+    mat_tmp=copy.deepcopy(mat)
+    if type==0: #Voisinnage multiplie un terme par -1
+        x=index//mat.shape[1]
+        y=index%mat.shape[1]
+        mat_tmp[x][y]*=-1
+    elif type==1:
+        mat_tmp[index,:]*=-1
+    elif type==2:
+        mat_tmp[:,index]*=-1
+    elif type==3:
+        mat_tmp[index,:],mat_tmp[index2,:]=(mat_tmp[index2,:],mat_tmp[index,:])
+    elif type==4:
+        mat_tmp[:,index],mat_tmp[:,index2]=(mat_tmp[:,index2],mat_tmp[:,index])
+    return mat_tmp
+
+def recherche_locale(matrix,pattern,param,la_totale,verbose=False):
+    if matrix.size==1 and matrix[0][0]==0:
+        return pattern
+    counter=0
+    while counter<1:
+        counter+=1
+        pattern_best=copy.deepcopy(pattern)
+        for i in range(matrix.shape[0]*matrix.shape[1]):   
+            pattern_tmp=perm(0,pattern,i)
+            if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                pattern_best=copy.deepcopy(pattern_tmp)
+                if verbose:
+                    print(f"0 rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+                counter=0
+        if la_totale:
+            for i in range(matrix.shape[0]):   
+                pattern_tmp=perm(1,pattern,i)
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                    pattern_best=copy.deepcopy(pattern_tmp)
+                    if verbose:
+                        print(f"1 rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+                    counter=0
+            for i in range(matrix.shape[1]):   
+                pattern_tmp=perm(2,pattern,i)
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                    pattern_best=copy.deepcopy(pattern_tmp)
+                    if verbose:
+                        print(f"2 rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+                    counter=0
+            for i in range(matrix.shape[0]):
+                for j in range(i,matrix.shape[0]):    
+                    pattern_tmp=perm(3,pattern,i,j)
+                    if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                        pattern_best=copy.deepcopy(pattern_tmp)
+                        if verbose:
+                            print(f"3 rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+                        counter=0
+            for i in range(matrix.shape[1]):
+                for j in range(i,matrix.shape[1]):    
+                    pattern_tmp=perm(4,pattern,i,j)
+                    if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                        pattern_best=copy.deepcopy(pattern_tmp)
+                        if verbose:
+                            print(f"4 rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+                        counter=0
+        pattern=copy.deepcopy(pattern_best)
+    return pattern
+
+def greedy(matrix,pattern,setup_break,la_totale,verbose=False):
+    if matrix.size==1 and matrix[0][0]==0:
+        return pattern
+    counter=0
+    while counter<1:
+        counter+=1
+        for i in range(matrix.shape[0]*matrix.shape[1]):   
+            pattern_tmp=perm(0,pattern,i)
+            if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                pattern=copy.deepcopy(pattern_tmp)
+                if verbose:
+                    print(f"0 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
+                counter=0
+                if setup_break==1 or setup_break==3:break
+        if la_totale:
+            for i in range(matrix.shape[0]):   
+                pattern_tmp=perm(1,pattern,i)
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                    pattern=copy.deepcopy(pattern_tmp)
+                    if verbose:
+                        print(f"1 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
+                    counter=0
+                    if setup_break==1 or setup_break==3:break
+            for i in range(matrix.shape[1]):   
+                pattern_tmp=perm(2,pattern,i)
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                    pattern=copy.deepcopy(pattern_tmp)
+                    if verbose:
+                        print(f"2 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
+                    counter=0
+                    if setup_break==1 or setup_break==3:break
+            for i in range(matrix.shape[0]):
+                for j in range(i,matrix.shape[0]):    
+                    pattern_tmp=perm(3,pattern,i,j)
+                    if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                        pattern=copy.deepcopy(pattern_tmp)
+                        if verbose:
+                            print(f"3 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
+                        counter=0
+                        if setup_break==1 or setup_break==3:break
+                else:
+                    continue
+                if setup_break==2 or setup_break==3:break
+            for i in range(matrix.shape[1]):
+                for j in range(i,matrix.shape[1]):    
+                    pattern_tmp=perm(4,pattern,i,j)
+                    if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                        pattern=copy.deepcopy(pattern_tmp)
+                        if verbose:
+                            print(f"4 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
+                        counter=0
+                        if setup_break==1 or setup_break==3:break
+                else:
+                    continue
+                if setup_break==2 or setup_break==3:break
+    return pattern
+
+def subdivise_mat(mat,size):
+
+    list_mat=[]
+    for i in range(mat.shape[0]//size+1):
+        for j in range(mat.shape[1]//size+1):
+            tmp=mat[i*size:(i+1)*size,j*size:(j+1)*size]
+            if tmp.size!=0:
+                list_mat.append(tmp)
+    return list_mat
+
+def reassemble_mat(mat,size,list_mat):
+    x=mat.shape[0]//size
+    if mat.shape[0]%size:
+        x+=1
+    y=mat.shape[1]//size
+    if mat.shape[1]%size:
+        y+=1
+    list_math=[]
+    for i in range(x):
+        list_math.append(np.hstack(list_mat[i*y:i*y+y]))
+    matrix=np.vstack(list_math)
+    return matrix
+
+def tabu(matrix,pattern,file,param,verbose=False,max_attemp=100):
+    if matrix.size==1 and matrix[0][0]==0:
+        return pattern
+    #init liste
+    list_tabu=[]
+    for _ in range(file):
+        list_tabu.append(pattern)
+    pattern_best=copy.deepcopy(pattern)
+
+    counter=0
+    attemp=0
+    while attemp<=max_attemp:
+        pattern_tmp_best=perm(0,pattern,0)
+        for i in range(matrix.shape[0]*matrix.shape[1]):   
+                pattern_tmp=perm(0,pattern,i)
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern_tmp_best) and not any(np.array_equal(pattern_tmp,i) for i in list_tabu):
+                    if verbose:
+                        print(f"rank: {fobj(matrix,pattern_tmp_best)[0]}, valeur min: {fobj(matrix,pattern_tmp_best)[1]}")
+                    pattern_tmp_best=copy.deepcopy(pattern_tmp)
+        list_tabu[counter]=pattern_tmp_best
+        counter=(counter+1)%file
+        attemp+=1
+        if compareP1betterthanP2(matrix,pattern_tmp_best,pattern_best):
+            pattern_best=copy.deepcopy(pattern_tmp_best)
+            if verbose:
+                print(f"rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+            attemp=0
+    return pattern_best
+
+def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
+        print(f"Testing for size={param[0]}, param2={param[1]} and param3={param[2]}")
+        list_mat=subdivise_mat(matrix,param[0])
+        list_pat=subdivise_mat(pattern,param[0])
+        for i in range(len(list_pat)):
+            list_pat[i]=funct(list_mat[i], list_pat[i],param[1],param[2],verbose)
+        pattern_tmp=reassemble_mat(pattern,param[0],list_pat)
+        pattern_tmp=funct(matrix,pattern_tmp,param[1],param[2],verbose)
+        return (pattern_tmp,param)
+
 def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
     if init is None:
         line_labels = clustering_lines(M, n_clusters)
@@ -467,9 +682,7 @@ def recherche_kmins(M,n_clusters,max_iter):
 
 # o_matrix = np.random.choice([-1, 1], size=M.shape)
 # print(fobj(M,full_local_search(o_matrix,0)))
-list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_elem_1_2,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
-#M_list = divide_matrix(M)
-list_sol = list()
+
 
 # for elem in M_list:
 #     genetique_matrix = genetique(elem,2,0,list_cross,0.20,True,50,10,n_parents = 50,parent_init = None)
@@ -480,14 +693,8 @@ list_sol = list()
 # liste_parent = [None]
 # for i in range(1):
 # #     liste_parent.append(_random_matrix(100))
-genetique_matrix = genetique(M,2,0,list_cross,0.20,True,100,max_depth=10   ,n_parents = 100,parent_init=None,method_next_gen="Tournament")
-print(fobj(M,genetique_matrix))
 
-# print(fobj(reel_matrix,sol))
-
-# VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
-# print(fobj(M,VNS_matrix))
-# VNS_matrix = VNS(M,2,0,2000,max_depth = 10)
+# VNS_matrix = VNS(M,2,0,1000,max_depth = 2)
 # print(fobj(M,VNS_matrix))
 
 # k_mins_search = recherche_kmins(M, 2, 1000)
@@ -496,54 +703,93 @@ print(fobj(M,genetique_matrix))
 # dict_values([1, 1, 1, 27, 1, 6, 5, 7, 2, 46, 1, 2])
 # (12, 0.718034780966193)
 #reel_matrix = matrices1_ledm(25)
-#2 means, 100 parents
-# [[ 1. -1. -1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [ 1.  1. -1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [ 1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [ 1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [ 1.  1.  1. -1.  1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [ 1.  1.  1. -1. -1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [ 1.  1.  1.  1.  1.  1.  1. -1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [ 1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [ 1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [ 1.  1.  1.  1.  1.  1.  1.  1. -1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [-1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1. -1.
-#   -1. -1. -1.  1. -1. -1. -1.]
-#  [ 1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [ 1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1. -1. -1. -1. -1. -1.
-#   -1. -1. -1. -1. -1. -1. -1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1.  1.
-#    1.  1.  1.  1.  1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1.
-#    1.  1.  1.  1.  1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.
-#    1.  1.  1.  1.  1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1. -1.
-#    1.  1.  1.  1.  1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1.  1.
-#    1.  1.  1.  1.  1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1.  1.
-#    1.  1.  1.  1.  1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1.  1.
-#   -1.  1.  1.  1.  1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1.  1.
-#    1.  1.  1.  1. -1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1.  1.
-#    1.  1.  1.  1. -1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1.  1.
-#    1.  1.  1.  1.  1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1.  1.
-#    1.  1.  1.  1.  1.  1.  1.]
-#  [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1.  1.  1.  1.  1.  1.
-#    1.  1.  1.  1.  1. -1.  1.]]
+def Johanmethod(debug = True,best_param = False,pattern = None, matrix = M):
+    debug=debug
+    best_param=best_param
+    metah=0 #0 for greedy, 1 for tabu, 2 for local search
+    matrix = matrix
+    if pattern == None:
+        pattern=np.ones(matrix.shape)
+    else:
+        pattern = pattern
+    if best_param:
+        #determination meilleur parametre
+        start_time=time.time()
+        pattern_best=copy.deepcopy(pattern)
+        if metah==0:
+            la_totale=[False,True]
+            setup_break=range(4)
+            size=range(2,max(matrix.shape)+1)
+            param=itertools.product(la_totale,setup_break,size)
+            data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(greedy,matrix,pattern,(i[2],i[1],i[0])) for i in param)
+            for (pattern_tmp,p) in data:
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                    pattern_best=copy.deepcopy(pattern_tmp)
+                    size_best=p[0]
+                    setup_break_best=p[1]
+                    la_totale_best=p[2]
+                    print(f"for param size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+                    
+            print(f"param opti: size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best}")
+        elif metah==1:
+            queue=range(1,11)
+            size=range(2,max(matrix.shape)+1)
+            param=itertools.product(queue,size)
+            data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(tabu,matrix,pattern,(i[1],i[0])) for i in param)
+            for (pattern_tmp,p) in data:
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                    pattern_best=copy.deepcopy(pattern_tmp)
+                    size_best=p[0]
+                    queue_best=p[1]
+                    print(f"for param size={size_best} and queue={queue_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+            
+            print(f"param opti: size={size_best} and queue={queue_best}")
+        elif metah==2:
+            la_totale=[False,True]
+            size=range(2,max(matrix.shape)+1)
+            param=itertools.product(la_totale,size)
+            data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(recherche_locale,matrix,pattern,(i[1],i[0])) for i in param)
+            for (pattern_tmp,p) in data:
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                    pattern_best=copy.deepcopy(pattern_tmp)
+                    size_best=p[0]
+                    la_totale_best=p[1]
+                    print(f"for param size={size_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+            print(f"param opti: size={size_best} and la_totale={la_totale_best}")
+
+        print(fobj(matrix,pattern_best))
+
+        end_time=time.time()
+        print(f"temps de calcul pour trouve param opti= {end_time-start_time}s")
+
+    if debug:
+        start_time=time.time()
+        if not best_param:
+            size_best=12
+            setup_break_best=0 #0,1,2 or 3
+            la_totale_best=True #True or False
+        if metah==0:
+            (pattern_tmp,p)=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale_best),verbose=True)
+        elif metah==1:
+            (pattern_tmp,p)=Resolve_metaheuristic(tabu,matrix,pattern,(size_best,queue_best,'/'),verbose=True)
+        elif metah==2:
+            (pattern_tmp,p)=Resolve_metaheuristic(recherche_locale,matrix,pattern,(size_best,'/',la_totale_best),verbose=True)
+        end_time=time.time()
+        print(fobj(matrix,pattern_tmp))
+        print(f"temps de calcul pour calculer solution= {end_time-start_time}s")
+
+    
+    #utils.ecrire_fichier("solution.txt",matrix,pattern_tmp)
+    return pattern_tmp
+
+
+list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
+#M_list = divide_matrix(M)
+list_sol = list()    
+genetique_matrix = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=Johanmethod(),method_next_gen="Tournament_pro")
+print(fobj(M,genetique_matrix ))
+
+print(fobj(reel_matrix,genetique_matrix))
+
+VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
+print(fobj(M,VNS_matrix))
