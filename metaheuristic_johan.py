@@ -184,8 +184,7 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
         print(f"Testing for size={param[0]}, param2={param[1]} and param3={param[2]}")
         list_mat=subdivise_mat(matrix,param[0])
         list_pat=subdivise_mat(pattern,param[0])
-        for i in range(len(list_pat)):
-            list_pat[i]=funct(list_mat[i], list_pat[i],param[1],param[2],verbose)
+        list_pat=Parallel(n_jobs=-1)(delayed(funct)(list_mat[i],list_pat[i],param[1],param[2],verbose) for i in range(len(list_pat)))
         pattern_tmp=reassemble_mat(pattern,param[0],list_pat)
         pattern_tmp=funct(matrix,pattern_tmp,param[1],param[2],verbose)
         return (pattern_tmp,param)
@@ -195,7 +194,7 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 # matrix=utils.lire_fichier("data/correl5_matrice.txt")
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
 # matrix=matrices2_slackngon(20)
-matrix=utils.LEDM (32,32)
+matrix=utils.LEDM (120,120)
 # matrix=utils.random_matrix(20,20,2)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
@@ -204,7 +203,7 @@ pattern=np.ones(matrix.shape)
 print(fobj(matrix,pattern))
 
 debug=True
-best_param=True
+best_param=False
 metah=0 #0 for greedy, 1 for tabu, 2 for local search
 
 
@@ -254,14 +253,12 @@ if best_param:
         print(f"param opti: size={size_best} and la_totale={la_totale_best}")
 
     print(fobj(matrix,pattern_best))
-
-    end_time=time.time()
-    print(f"temps de calcul pour trouve param opti= {end_time-start_time}s")
+    print(f"temps de calcul pour trouve param opti= {time.time()-start_time}s")
 
 if debug:
     start_time=time.time()
     if not best_param:
-        size_best=10
+        size_best=12
         setup_break_best=0 #0,1,2 or 3
         la_totale_best=True #True or False
     if metah==0:
