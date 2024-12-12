@@ -6,11 +6,13 @@ from opti_combi_projet_pythoncode_texte import fobj,compareP1betterthanP2,matric
 from utils import LEDM,lire_fichier,random_matrix
 import utils
 
-def selection_par_roulette_multi(M, population, fobj, n_parents, tol=1e-14):
+
+def selection_par_roulette_multi(M, population, fobj, n_parents):
     # Étape 1 : Calcul des rangs et des petites valeurs singulières
-    evaluation = [fobj(M, individu, tol) for individu in population]
-    rangs = np.array([eval[0] for eval in evaluation])
-    val_singulieres = np.array([eval[1] for eval in evaluation])
+    evaluation = np.array([fobj(M, individu) for individu in population])
+   
+    rangs = evaluation[:, 0]  # Extraire les rangs
+    val_singulieres = evaluation[:, 1]  # Extraire les valeurs singulières
     
     # Étape 2 : Première roulette basée sur les rangs
     rangs_inverses = 1 / (1 + rangs)  # Probabilité inverse du rang (plus bas est mieux)
@@ -19,10 +21,10 @@ def selection_par_roulette_multi(M, population, fobj, n_parents, tol=1e-14):
     
     for _ in range(n_parents):
         # Sélectionner un rang en fonction des probabilités
-        rang_choisi = np.random.choice(np.unique(rangs), p=np.bincount(rangs)[np.unique(rangs)] / len(rangs))
+        rang_choisi = np.random.choice(rangs, p=proba_rangs)
         
        # Étape 3 : Filtrer les individus ayant ce rang
-        indices_candidats = [i for i, rang in enumerate(rangs) if rang == rang_choisi]
+        indices_candidats = np.where(rangs == rang_choisi)[0]
         candidats = [population[i] for i in indices_candidats]
         val_sing_candidats = val_singulieres[indices_candidats]
 
@@ -35,4 +37,3 @@ def selection_par_roulette_multi(M, population, fobj, n_parents, tol=1e-14):
         parents.append(candidats[index_choisi])
     
     return parents
-

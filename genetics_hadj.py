@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from sklearn.cluster import KMeans
-
+from algo_roulette import selection_par_roulette_multi
 from opti_combi_projet_pythoncode_texte import fobj,compareP1betterthanP2,matrices1_ledm,matrices2_slackngon
 from utils import LEDM,lire_fichier,random_matrix
 import utils
@@ -9,7 +9,7 @@ import utils
 #reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/ledm6_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
-reel_matrix = LEDM(4,120)
+reel_matrix = LEDM(20,120)
 #reel_matrix = reel_matrix.transpose()
 #reel_matrix = matrices2_slackngon(7)
 #reel_matrix = random_matrix(25,25,5)
@@ -170,7 +170,6 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 enfants_mute[i][n1][n2] = -enfants_mute[i][n1][n2]
         enfants += enfants_mute
-
         parents += enfants
 
         # Sélection des meilleurs sujets
@@ -193,7 +192,9 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
                 else:
                     new_parents.append(parents[i+1])
             parents = new_parents.copy()
-                
+        elif method_next_gen == "roulette":
+            selection_par_roulette_multi(M, parents, fobj, n_parents)
+
                 
 
 
@@ -203,7 +204,6 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
             best_matrice = parents[0].copy()
             print(methode_cross.__name__)
             print(f"improve")
-
     count_dict = {}
     for matrice in parents:
         key = tuple(matrice.flatten())
@@ -504,7 +504,7 @@ def recherche_kmins(M,n_clusters,max_iter):
 
 # o_matrix = np.random.choice([-1, 1], size=M.shape)
 # print(fobj(M,full_local_search(o_matrix,0)))
-list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_elem_1_2,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks,uniform_crossover,one_point_crossover]
+list_cross = [uniform_crossover]#[#cross_by_half_split,cross_by_vertical_split,cross_by_elem_1_2,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks,uniform_crossover,one_point_crossover]
 #M_list = divide_matrix(M)
 list_sol = list()
 
@@ -517,7 +517,7 @@ list_sol = list()
 # liste_parent = [None]
 # for i in range(1):
 # #     liste_parent.append(_random_matrix(100))
-genetique_matrix = genetique(M,2,0,list_cross,0.20,True,100,max_depth=10   ,n_parents = 100,parent_init=None,method_next_gen="Tournament")
+genetique_matrix = genetique(M,2,0,list_cross,0.20,False,100,max_depth=10   ,n_parents = 50,parent_init=None,method_next_gen="roulette")
 print(fobj(M,genetique_matrix))
 
 # print(fobj(reel_matrix,sol))
