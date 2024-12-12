@@ -184,8 +184,7 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
         print(f"Testing for size={param[0]}, param2={param[1]} and param3={param[2]}")
         list_mat=subdivise_mat(matrix,param[0])
         list_pat=subdivise_mat(pattern,param[0])
-        for i in range(len(list_pat)):
-            list_pat[i]=funct(list_mat[i], list_pat[i],param[1],param[2],verbose)
+        list_pat=Parallel(n_jobs=-1)(delayed(funct)(list_mat[i],list_pat[i],param[1],param[2],verbose) for i in range(len(list_pat)))
         pattern_tmp=reassemble_mat(pattern,param[0],list_pat)
         pattern_tmp=funct(matrix,pattern_tmp,param[1],param[2],verbose)
         return (pattern_tmp,param)
@@ -194,9 +193,9 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 # matrix=utils.lire_fichier("data/ledm6_matrice (1).txt")
 # matrix=utils.lire_fichier("data/correl5_matrice.txt")
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
-# matrix=matrices2_slackngon(20)
-matrix=utils.LEDM (32,32)
-# matrix=utils.random_matrix(20,20,2)
+matrix=matrices2_slackngon(29)
+# matrix=utils.LEDM (30,30)
+# matrix=utils.random_matrix(30,30,2)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
 pattern=np.ones(matrix.shape)
@@ -231,7 +230,7 @@ if best_param:
         queue=range(1,11)
         size=range(2,max(matrix.shape)+1)
         param=itertools.product(queue,size)
-        data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(tabu,matrix,pattern,(i[1],i[0])) for i in param)
+        data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(tabu,matrix,pattern,(i[1],i[0],'/')) for i in param)
         for (pattern_tmp,p) in data:
             if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
                 pattern_best=copy.deepcopy(pattern_tmp)
@@ -244,7 +243,7 @@ if best_param:
         la_totale=[False,True]
         size=range(2,max(matrix.shape)+1)
         param=itertools.product(la_totale,size)
-        data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(recherche_locale,matrix,pattern,(i[1],i[0])) for i in param)
+        data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(recherche_locale,matrix,pattern,(i[1],i[0],'/')) for i in param)
         for (pattern_tmp,p) in data:
             if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
                 pattern_best=copy.deepcopy(pattern_tmp)
@@ -254,16 +253,14 @@ if best_param:
         print(f"param opti: size={size_best} and la_totale={la_totale_best}")
 
     print(fobj(matrix,pattern_best))
-
-    end_time=time.time()
-    print(f"temps de calcul pour trouve param opti= {end_time-start_time}s")
+    print(f"temps de calcul pour trouve param opti= {time.time()-start_time}s")
 
 if debug:
     start_time=time.time()
     if not best_param:
-        size_best=10
-        setup_break_best=0 #0,1,2 or 3
-        la_totale_best=True #True or False
+        size_best=5
+        setup_break_best=2 #0,1,2 or 3
+        la_totale_best=False #True or False
     if metah==0:
         (pattern_tmp,p)=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale_best),verbose=True)
     elif metah==1:
