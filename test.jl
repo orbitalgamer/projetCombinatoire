@@ -7,15 +7,9 @@ ENV["JULIA_NUM_THREADS"] = 24
 function perm(type, mat, index, index2=69)
     tmp = copy(mat)
     if type==0
-        x = div(index, size(mat, 2))  # div() pour la division entière (équivalent de // en Python)
-        if x == 0
-            x+=1
-        end
-        y = (index % size(mat, 2))  # % pour obtenir le reste de la division
-        if y == 0
-            y+=1
-        end
-        tmp[x, y] *= -1  # Modification de l'élément (x, y) de mat_tmp
+        x = div(index-1, size(mat, 2))  # div() pour la division entière (équivalent de // en Python)
+        y = ((index-1) % size(mat, 2))  # % pour obtenir le reste de la division
+        tmp[x+1, y+1] *= -1  # Modification de l'élément (x, y) de mat_tmp
     elseif type==1
         tmp[index, :]*=-1
     elseif type==2
@@ -235,7 +229,7 @@ function Resolve_metaheuristic(funct, matrix, pattern, param, verbose=false)
     println("testing for size = $(param[1]), param2=$(param[2]), and param3=$(param[3])")
     list_mat = subdivise_mat(matrix, param[1]) #subdivise
     list_pat = subdivise_mat(pattern, param[1]) #pareil pour pattern
-    @threads for i in 1:length(list_pat) #parallèle
+    @threads for i in eachindex(list_pat) #parallèle
         list_pat[i] = funct(list_mat[i], list_pat[i], param[2], param[3], verbose)
     end
     pattern_tmp = reassemble_mat(pattern, param[1], list_pat)
@@ -244,46 +238,46 @@ function Resolve_metaheuristic(funct, matrix, pattern, param, verbose=false)
 end
 
 function main()
-    matrix = LEDM(30,30)
+    matrix = LEDM(10,10)
 
     pattern = ones(size(matrix))
 
     println(fobj(matrix, pattern))
 
     debug = true
-    best_param = false
-    metah = 0
+    best_param = true
+    metah = 2
 
     if best_param
         start_time = time()
         pattern_best = copy(pattern)
         if metah == 0
             data = []
-            @threads for i in [true, false]
-                for j in 0:3
-                    for k in 2:maximum(size(matrix))
-                        push!(data, Resolve_metaheuristic(greedy, matrix, pattern, (k, j, i)))
-                    end
+            @threads for i in CartesianIndices((2:maximum(size(matrix)),0:3,0:1))
+                if i[3]==1
+                    push!(data, Resolve_metaheuristic(greedy, matrix, pattern, (i[1], i[2], true)))
+                else
+                    push!(data, Resolve_metaheuristic(greedy, matrix, pattern, (i[1], i[2], false)))
                 end
             end
-            
+
             for (patter_tmp, p) in data
                 if compareP1betterthanP2(matrix, patter_tmp, pattern_best)
                     patter_best = copy(patter_tmp)
                     size_best=p[1]
                     setup_break_best = p[2]
                     la_totale_best = p[3]
-                    print("fo param size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best rank : $(fobj(matrix,patter_best)[1]), valeur min = $(fob(matrix, patter_best)[2])")
+                    print("for param size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best rank : $(fobj(matrix,patter_best)[1]), valeur min = $(fob(matrix, patter_best)[2])")
                 end
             end
-            print("fo param size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best")
+            print("param opti size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best")
         elseif metah == 2
             data = []
-            @threads for i in [true, false]
-                for j in 0:3
-                    for k in 2:maximum(size(matrix))
-                        push!(data, Resolve_metaheuristic(recherche_locale, matrix, pattern, (k, j, i)))
-                    end
+            @threads for i in CartesianIndices((2:maximum(size(matrix)),0:1))
+                if i[2]==1
+                    push!(data, Resolve_metaheuristic(greedy, matrix, pattern, (i[1],'/', true)))
+                else
+                    push!(data, Resolve_metaheuristic(greedy, matrix, pattern, (i[1],'/', false)))
                 end
             end
             
@@ -305,18 +299,19 @@ function main()
     if debug
         start_time = time()
         if !best_param
-            size_best=32
+            size_best=30
             setup_break_best=0
-            la_totale_best=true
+            la_totale_best=false
         end
         if metah==0
             (patter_tmp, p) = Resolve_metaheuristic(greedy, matrix, pattern, (size_best, setup_break_best, la_totale_best), true)
         elseif metah==2
             (patter_tmp, p) = Resolve_metaheuristic(recherche_locale, matrix, pattern, (size_best, setup_break_best, la_totale_best), true)
         end
-        print(fobj(matrix, patter_tmp))
-        print("took $(time()-start_time)")
+        println(fobj(matrix, patter_tmp))
+        println("took $(time()-start_time)s")
     end
+    ecrire_fichier("solution_julia.txt",matrix,patter_tmp)
 end
 
 main()
