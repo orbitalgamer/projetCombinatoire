@@ -193,17 +193,18 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 # matrix=utils.lire_fichier("data/ledm6_matrice (1).txt")
 # matrix=utils.lire_fichier("data/correl5_matrice.txt")
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
-matrix=matrices2_slackngon(29)
-# matrix=utils.LEDM (30,30)
-# matrix=utils.random_matrix(30,30,2)
+# matrix=matrices2_slackngon(5)
+matrix=utils.LEDM (120,120)
+# matrix=utils.random_matrix(120,120,2)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
 pattern=np.ones(matrix.shape)
 # pattern=utils.generate_initial_P(matrix,2,2)
+# pattern=utils.pat_ledm(matrix) #best solution for LEDM
 print(fobj(matrix,pattern))
 
 debug=True
-best_param=True
+best_param=False
 metah=0 #0 for greedy, 1 for tabu, 2 for local search
 
 
@@ -258,9 +259,9 @@ if best_param:
 if debug:
     start_time=time.time()
     if not best_param:
-        size_best=5
-        setup_break_best=2 #0,1,2 or 3
-        la_totale_best=False #True or False
+        size_best=12
+        setup_break_best=0 #0,1,2 or 3
+        la_totale_best=True #True or False
     if metah==0:
         (pattern_tmp,p)=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale_best),verbose=True)
     elif metah==1:
