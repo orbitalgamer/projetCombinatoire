@@ -14,11 +14,11 @@ from sklearn.decomposition import PCA
 
 #reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/ledm6_matrice (1).txt")
-#reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
+reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
 #reel_matrix = LEDM(30,30)
 #reel_matrix = reel_matrix.transpose()
-#reel_matrix = matrices2_slackngon(16)
-reel_matrix = random_matrix(120,120,3)
+#reel_matrix = matrices2_slackngon(15)
+#reel_matrix = random_matrix(50,50,3)
 M = reel_matrix
 
 def divide_matrix_line(matrix):
@@ -748,28 +748,35 @@ def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
         init_matrix = init.copy()
     voisinage_index = 0
     best_matrix = init_matrix.copy()
+    n_not_best = 1
     for i in range(kmax):
         if voisinage_index == 0:
-            n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
-            init_matrix[n1,n2] = -init_matrix[n1,n2]
+            for _ in range(int(n_not_best**0.5)):
+                n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
+                init_matrix[n1,n2] = -init_matrix[n1,n2]
         elif voisinage_index == 1:
-            n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
-            init_matrix[n1,n2] = -init_matrix[n1,n2]
-            init_matrix[-n1,-n2] = -init_matrix[-n1,-n2]
+            for _ in range(int(n_not_best**0.5)):
+                n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
+                init_matrix[n1,n2] = -init_matrix[n1,n2]
+                init_matrix[-n1,-n2] = -init_matrix[-n1,-n2]
         elif voisinage_index == 2:
-            n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
-            init_matrix[n1,n2] = -init_matrix[n1,n2]
-            init_matrix[-n1,n2] = -init_matrix[-n1,n2]
+            for _ in range(int(n_not_best**0.5)):
+                n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
+                init_matrix[n1,n2] = -init_matrix[n1,n2]
+                init_matrix[-n1,n2] = -init_matrix[-n1,n2]
         elif voisinage_index == 3:
-            n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
-            init_matrix[n1,n2] = -init_matrix[n1,n2]
-            init_matrix[n1,-n2] = -init_matrix[n1,-n2]
+            for _ in range(int(n_not_best**0.5)):
+                n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
+                init_matrix[n1,n2] = -init_matrix[n1,n2]
+                init_matrix[n1,-n2] = -init_matrix[n1,-n2]
         elif voisinage_index == 4:
-            l = random.randint(0,init_matrix.shape[1]-1)
-            init_matrix[l,:] = -init_matrix[l,:]
+            for _ in range(int(n_not_best**0.5)):
+                l = random.randint(0,init_matrix.shape[1]-1)
+                init_matrix[l,:] = -init_matrix[l,:]
         elif voisinage_index == 5:
-            c = random.randint(0,init_matrix.shape[0]-1)
-            init_matrix[:,c] = -init_matrix[:,c]
+            for _ in range(int(n_not_best**0.5)):
+                c = random.randint(0,init_matrix.shape[0]-1)
+                init_matrix[:,c] = -init_matrix[:,c]
         
         
         init_matrix = full_local_search(M,init_matrix, voisinage,max_depth)
@@ -781,9 +788,12 @@ def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
         print(f"iteration {i}")
         if compareP1betterthanP2(M, init_matrix, best_matrix):
             best_matrix = init_matrix.copy()
+            n_not_best = 1
             print(f"improve by voisinage {voisinage_index}")
         else:
             init_matrix = best_matrix.copy()
+            if n_clusters < 150:
+                n_not_best += 1
         voisinage_index = (voisinage_index+1)%6
     return best_matrix
             
@@ -945,16 +955,10 @@ list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_r
 
 liste_method = []
 print("Start Johan")
-johan_method = Johanmethod(best_param=False)
+johan_method = Johanmethod(best_param=True)
 print(fobj(M,johan_method))
 print("Start Genetique")
-import time
-a = time.time()
 genetique_method = genetique(M,2,0,list_cross,0.20,False,500,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
-print(a-time.time())
-a = time.time()
-genetique_method = genetique(M,2,0,list_cross,0.20,False,500,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
-print(a-time.time())
 print(fobj(M,genetique_method))
 cluster_method = Clustermethod(M,n_clusters=2)
 print(fobj(M,cluster_method))
@@ -963,7 +967,6 @@ liste_method.append(genetique_method)
 liste_method.append(cluster_method)
 liste_method.append(np.ones(M.shape))
 liste_method.append(np.ones(M.shape)*(-1))
-print(liste_method[-1])
 
 parents = GenerationParents(M,100,liste_method)
 temp = [None]
