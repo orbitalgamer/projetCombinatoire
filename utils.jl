@@ -21,15 +21,15 @@ end
 
 function LEDM(n,m)
     mat = zeros(n,m)
-    for i in 0:n
-        for j in 0:m
+    for i in 1:n
+        for j in 1:m
             mat[i,j]=(i-j)^2
         end
     end
     return mat
 end
 
-function random_matrix (m,n,r)
+function random_matrix(m,n,r)
     return ((10*rand(m,r)) * (10*rand(r,n)))^2
 end
 
