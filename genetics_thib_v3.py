@@ -15,10 +15,10 @@ from sklearn.decomposition import PCA
 #reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/ledm6_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
-reel_matrix = LEDM(120,120)
+#reel_matrix = LEDM(30,30)
 #reel_matrix = reel_matrix.transpose()
 #reel_matrix = matrices2_slackngon(16)
-#reel_matrix = random_matrix(25,25,2)
+reel_matrix = random_matrix(120,120,3)
 M = reel_matrix
 
 def divide_matrix_line(matrix):
@@ -140,7 +140,7 @@ def clustering_columns(M, n_clusters):
     labels = kmeans.fit_predict(M.T)
     return labels
 
-def generate_initial_P(M, line_labels, col_labels,noise_prob):
+def generate_initial_P(M, line_labels, col_labels,noise_prob = 0):
     P = np.zeros_like(M)
     # unique_line_labels = np.unique(line_labels)
     # unique_col_labels = np.unique(col_labels)
@@ -153,6 +153,7 @@ def generate_initial_P(M, line_labels, col_labels,noise_prob):
     return P
 
 def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,time,max_depth,n_parents, parent_init = None,method_next_gen = "Best"):
+    diffusion =0
     if parent_init is None:
         # Clustering des lignes et des colonnes
         line_labels = clustering_lines(M, n_clusters)
@@ -163,6 +164,7 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
         #parents += [generate_initial_P(M, line_labels, col_labels,noise_prob=0.05) for _ in range(50)]
     elif parent_init[0] is None:
         parents = parent_init[1]
+        diffusion =4
     else:
         parents = [parent_init.copy() for i in range(n_parents)]
     # return parents[0]
@@ -173,7 +175,8 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
         random.shuffle(parents)
         #Creation enfants
         methode_cross = list_methode_cross[t%len(list_methode_cross)]
-        enfants : list = methode_cross(parents)
+        enfants = methode_cross(parents)
+        random.shuffle(enfants)
         enfants,enfants_mute = enfants[:int(len(enfants)*mutation_rate)],enfants[int(len(enfants)*mutation_rate):]
         
         
@@ -192,47 +195,58 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
         parents += enfants
 
         # Sélection des meilleurs sujets
-        
-        if method_next_gen == "Best":
-            parents = [(fobj(M, parent ), parent) for parent in parents]
-            parents = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[:len(parents) // 2]]
-        # elif method_next_gen =="Weels":
-        #     for i,parent in enumerate (parents):
-        #         if parent[0][0] != parents[0][0][0]:
-        #             end_of_best = i
-        #             break
-        #     pass
-        elif method_next_gen == "Tournament":
-            random.shuffle(parents)
-            new_parents = []
-            for i in range(0,len(parents),2):
-                if compareP1betterthanP2(M, parents[i], parents[i+1] ):
-                    new_parents.append(parents[i])
+        if diffusion > 0:
+            diffusion -= 1
+        else : 
+            if method_next_gen == "Best":
+                if len(parents) >2* n_parents:
+                    parents = [(fobj(M, parent ), parent) for parent in parents]
+                    parents = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[:len(parents)//4]]
                 else:
-                    new_parents.append(parents[i+1])
-            parents = new_parents.copy()
-        elif method_next_gen == "Tournament_pro":
-            parents = [(fobj(M, parent ), parent) for parent in parents]
-            challenger = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[len(parents) // 4:3*len(parents) // 4]]
-            parents = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[:len(parents) // 4]]
-            random.shuffle(challenger)
-            new_challenger = []
-            for i in range(0,len(challenger),2):
-                if compareP1betterthanP2(M, challenger[i], challenger[i+1] ):
-                    new_challenger.append(challenger[i])
-                else:
-                    new_challenger.append(challenger[i+1])
-            parents += new_challenger 
+                    parents = [(fobj(M, parent ), parent) for parent in parents]
+                    parents = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[:len(parents)//2]]
+            # elif method_next_gen =="Weels":
+            #     for i,parent in enumerate (parents):
+            #         if parent[0][0] != parents[0][0][0]:
+            #             end_of_best = i
+            #             break
+            #     pass
+            elif method_next_gen == "Tournament":
+                random.shuffle(parents)
+                new_parents = []
+                if len(parents) >2* n_parents:
+                    for i in range(0,len(parents),2):
+                        if compareP1betterthanP2(M, parents[i], parents[i+1] ):
+                            new_parents.append(parents[i])
+                        else:
+                            new_parents.append(parents[i+1])
+                    parents = new_parents.copy()
+                new_parents = []
+                for i in range(0,len(parents),2):
+                    if compareP1betterthanP2(M, parents[i], parents[i+1] ):
+                        new_parents.append(parents[i])
+                    else:
+                        new_parents.append(parents[i+1])
+                parents = new_parents.copy()
+            elif method_next_gen == "Tournament_pro":
+                while len(parents) > n_parents:
+                    parents = [(fobj(M, parent ), parent) for parent in parents]
+                    challenger = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[len(parents) // 4:3*len(parents) // 4]]
+                    parents = [x[1] for x in sorted(parents, key=lambda x: (x[0][0], x[0][1]))[:len(parents) // 4]]
+                random.shuffle(challenger)
+                new_challenger = []
+                for i in range(0,len(challenger),2):
+                    if compareP1betterthanP2(M, challenger[i], challenger[i+1] ):
+                        new_challenger.append(challenger[i])
+                    else:
+                        new_challenger.append(challenger[i+1])
+                parents += new_challenger 
 
-
-                
-                
-
-
-
+ 
         print(f"{t} sur {time}")
         if compareP1betterthanP2(M,parents[0],best_matrice ):
             best_matrice = parents[0].copy()
+            print(fobj(M,best_matrice))
             print(methode_cross.__name__)
             print(f"improve")
 
@@ -262,10 +276,31 @@ def optimal_k(M, max_k=10):
 
 # Appliquer cette méthode pour déterminer optimal k
 
+def cross_by_half_split_2(parent1,parent2):
+    enfants = []
+    # Initialisation des enfants
+    enfant1 = np.zeros_like(parent1)
+    enfant2 = np.zeros_like(parent2)
+    
+    # Taille de la matrice
+    mid_row = parent1.shape[0] // 2  # Trouver la moitié de la hauteur
+    
+    # Construire enfant1 et enfant2
+    enfant1[:mid_row, :] = parent1[:mid_row, :]  # Haut de parent1
+    enfant1[mid_row:, :] = parent2[mid_row:, :]  # Bas de parent2
+    
+    enfant2[:mid_row, :] = parent2[:mid_row, :]  # Haut de parent2
+    enfant2[mid_row:, :] = parent1[mid_row:, :]  # Bas de parent1
+    
+    # Ajouter les enfants à la liste
+    enfants.append(enfant1)
+    enfants.append(enfant2)
+    return enfants
 
 def cross_by_half_split(parents):
     enfants = []
     # Couple de parents
+
     for i in range(0, len(parents) - 1, 2):
         parent1, parent2 = parents[i], parents[i + 1]
         
@@ -290,7 +325,28 @@ def cross_by_half_split(parents):
     # Mélanger les enfants pour plus de diversité
     random.shuffle(enfants)
     return enfants
-
+def cross_by_vertical_split_2(parent1,parent2):
+    enfants = []
+    
+    # Initialisation des enfants
+    enfant1 = np.zeros_like(parent1)
+    enfant2 = np.zeros_like(parent2)
+    
+    # Taille de la matrice
+    mid_col = parent1.shape[1] // 2  # Trouver la moitié des colonnes
+    
+    # Construire enfant1 et enfant2
+    enfant1[:, :mid_col] = parent1[:, :mid_col]  # Gauche de parent1
+    enfant1[:, mid_col:] = parent2[:, mid_col:]  # Droite de parent2
+    
+    enfant2[:, :mid_col] = parent2[:, :mid_col]  # Gauche de parent2
+    enfant2[:, mid_col:] = parent1[:, mid_col:]  # Droite de parent1
+    
+    # Ajouter les enfants à la liste
+    enfants.append(enfant1)
+    enfants.append(enfant2)
+    return enfants
+        
 def cross_by_vertical_split(parents):
     enfants = []
     # Couple de parents
@@ -317,6 +373,33 @@ def cross_by_vertical_split(parents):
     
     # Mélanger les enfants pour plus de diversité
     random.shuffle(enfants)
+    return enfants
+
+def cross_by_blocks_2(parent1,parent2):
+    enfants = []    
+    # Initialisation des enfants
+    enfant1 = np.zeros_like(parent1)
+    enfant2 = np.zeros_like(parent2)
+    
+    # Dimensions de la matrice
+    mid_row = parent1.shape[0] // 2
+    mid_col = parent1.shape[1] // 2
+    
+    # Enfant 1 : mélange de blocs
+    enfant1[:mid_row, :mid_col] = parent1[:mid_row, :mid_col]  # Haut-gauche de parent1
+    enfant1[mid_row:, mid_col:] = parent2[mid_row:, mid_col:]  # Bas-droite de parent2
+    enfant1[:mid_row, mid_col:] = parent2[:mid_row, mid_col:]  # Haut-droite de parent2
+    enfant1[mid_row:, :mid_col] = parent1[mid_row:, :mid_col]  # Bas-gauche de parent1
+    
+    # Enfant 2 : inverse des blocs
+    enfant2[:mid_row, :mid_col] = parent2[:mid_row, :mid_col]  # Haut-gauche de parent2
+    enfant2[mid_row:, mid_col:] = parent1[mid_row:, mid_col:]  # Bas-droite de parent1
+    enfant2[:mid_row, mid_col:] = parent1[:mid_row, mid_col:]  # Haut-droite de parent1
+    enfant2[mid_row:, :mid_col] = parent2[mid_row:, :mid_col]  # Bas-gauche de parent2
+    
+    # Ajouter les enfants à la liste
+    enfants.append(enfant1)
+    enfants.append(enfant2)
     return enfants
 
 def cross_by_blocks(parents):
@@ -353,6 +436,27 @@ def cross_by_blocks(parents):
     random.shuffle(enfants)
     return enfants
 
+def cross_by_alternating_rows_2(parent1,parent2):
+    enfants = []
+        
+    # Initialisation des enfants
+    enfant1 = np.zeros_like(parent1)
+    enfant2 = np.zeros_like(parent2)
+    
+    # Alterner les lignes
+    for j in range(parent1.shape[0]):
+        if j % 2 == 0:
+            enfant1[j, :] = parent1[j, :]
+            enfant2[j, :] = parent2[j, :]
+        else:
+            enfant1[j, :] = parent2[j, :]
+            enfant2[j, :] = parent1[j, :]
+    
+    # Ajouter les enfants à la liste
+    enfants.append(enfant1)
+    enfants.append(enfant2)
+    return enfants
+
 def cross_by_alternating_rows(parents):
     enfants = []
     # Couple de parents
@@ -378,6 +482,26 @@ def cross_by_alternating_rows(parents):
     
     # Mélanger les enfants pour plus de diversité
     random.shuffle(enfants)
+    return enfants
+
+def cross_by_alternating_line_2(parent1,parent2):
+    enfants = [] 
+    # Initialisation des enfants
+    enfant1 = np.zeros_like(parent1)
+    enfant2 = np.zeros_like(parent2)
+    
+    # Alterner les lignes
+    for j in range(parent1.shape[1]):
+        if j % 2 == 0:
+            enfant1[:, j] = parent1[:, j]
+            enfant2[:, j] = parent2[:, j]
+        else:
+            enfant1[:, j] = parent2[:, j]
+            enfant2[:, j] = parent1[:, j]
+    
+    # Ajouter les enfants à la liste
+    enfants.append(enfant1)
+    enfants.append(enfant2)
     return enfants
 
 def cross_by_alternating_line(parents):
@@ -703,6 +827,35 @@ def recherche_kmins(M,n_clusters,max_iter):
 # dict_values([1, 1, 1, 27, 1, 6, 5, 7, 2, 46, 1, 2])
 # (12, 0.718034780966193)
 #reel_matrix = matrices1_ledm(25)
+def Bruiteur_matrix(matrice,noise_prob):
+    P = matrice.copy()
+    for i in range(M.shape[0]):
+        for j in range(M.shape[1]):
+            if np.random.rand() < noise_prob:  # Avec une certaine probabilité, changer le cluster
+                P[i,j] = -P[i,j]
+    return P
+
+def GenerationParents(M,nombre,methods):
+    nombre_par_groupe = nombre//len(methods)
+    n_good = 2
+    liste_parent = []
+    bruit = 0
+    for init_method in methods:
+        for i in range(n_good):
+            liste_parent.append(init_method)
+        for i in range(nombre_par_groupe-n_good):
+            bruit += 0.002
+            bruit *= 1.01
+            liste_parent.append(Bruiteur_matrix(init_method,bruit))
+    if len(liste_parent) < nombre:
+        liste_parent.append(np.ones(M))
+    elif len(liste_parent) > nombre:
+        while(len(liste_parent) > nombre):
+            liste_parent.pop()
+    return liste_parent
+
+
+
 def Johanmethod(debug = True,best_param = False,pattern = None, matrix = M):
     debug=debug
     best_param=best_param
@@ -765,7 +918,7 @@ def Johanmethod(debug = True,best_param = False,pattern = None, matrix = M):
     if debug:
         start_time=time.time()
         if not best_param:
-            size_best=12
+            size_best=10
             setup_break_best=0 #0,1,2 or 3
             la_totale_best=True #True or False
         if metah==0:
@@ -781,15 +934,46 @@ def Johanmethod(debug = True,best_param = False,pattern = None, matrix = M):
     
     #utils.ecrire_fichier("solution.txt",matrix,pattern_tmp)
     return pattern_tmp
+def Clustermethod(M, n_clusters):
+    line_labels = clustering_lines(M, n_clusters)
+    col_labels = clustering_columns(M, n_clusters)
 
+    cluster = generate_initial_P(M, line_labels, col_labels)
+    return cluster
 
 list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
-#M_list = divide_matrix(M)
-list_sol = list()    
-genetique_matrix = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=Johanmethod(),method_next_gen="Tournament_pro")
+
+liste_method = []
+print("Start Johan")
+johan_method = Johanmethod(best_param=False)
+print(fobj(M,johan_method))
+print("Start Genetique")
+import time
+a = time.time()
+genetique_method = genetique(M,2,0,list_cross,0.20,False,500,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
+print(a-time.time())
+a = time.time()
+genetique_method = genetique(M,2,0,list_cross,0.20,False,500,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
+print(a-time.time())
+print(fobj(M,genetique_method))
+cluster_method = Clustermethod(M,n_clusters=2)
+print(fobj(M,cluster_method))
+liste_method.append(johan_method)
+liste_method.append(genetique_method)
+liste_method.append(cluster_method)
+liste_method.append(np.ones(M.shape))
+liste_method.append(np.ones(M.shape)*(-1))
+print(liste_method[-1])
+
+parents = GenerationParents(M,100,liste_method)
+temp = [None]
+temp.append(parents)
+parents = temp
+genetique_matrix = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
 print(fobj(M,genetique_matrix ))
 
 print(fobj(reel_matrix,genetique_matrix))
 
 VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
 print(fobj(M,VNS_matrix))
+print(f"And Johan was {fobj(M,johan_method)}")
