@@ -755,6 +755,7 @@ def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
         init_matrix = init.copy()
     voisinage_index = 0
     best_matrix = init_matrix.copy()
+    utils.ecrire_fichier("solution.txt",M,best_matrix)
     n_not_best = 1
     for i in range(kmax):
         if voisinage_index == 0:
@@ -968,7 +969,7 @@ if __name__=="__main__":
     a = time.time()
     liste_method = []
     print("Start Johan")
-    johan_method = Johanmethod(best_param=True, matrix=M)
+    johan_method = Johanmethod(best_param=False, matrix=M)
     print(fobj(M,johan_method))
     print("Start Genetique")
     genetique_method = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
