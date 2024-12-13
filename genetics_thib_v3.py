@@ -882,8 +882,8 @@ def Johanmethod(matrix, debug = True,best_param = False,pattern = None):
     metah=0 #0 for greedy, 1 for tabu, 2 for local search
     matrix = matrix
     if pattern == None:
-        #pattern=np.ones(matrix.shape)
-        pattern=np.random.choice([-1,1],size=matrix.shape)
+        pattern=np.ones(matrix.shape)
+        #pattern=np.random.choice([-1,1],size=matrix.shape)
     else:
         pattern = pattern
     if best_param:
