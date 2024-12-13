@@ -7,17 +7,18 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 from opti_combi_projet_pythoncode_texte import fobj,compareP1betterthanP2,matrices1_ledm,matrices2_slackngon
-from utils import LEDM,lire_fichier,random_matrix
+from utils import LEDM,lire_fichier,random_matrix,pat_ledm
 import utils
 from sklearn.decomposition import PCA
 
-
+best_sol_list = []
+#%%
 #reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/ledm6_matrice (1).txt")
-reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
-#reel_matrix = LEDM(30,30)
+#reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
+reel_matrix = LEDM(32,32)
 #reel_matrix = reel_matrix.transpose()
-#reel_matrix = matrices2_slackngon(15)
+#reel_matrix = matrices2_slackngon(16)
 #reel_matrix = random_matrix(50,50,3)
 M = reel_matrix
 
@@ -44,7 +45,7 @@ def reassemble_matrix_block(M_list):
     bottom = np.hstack((A21, A22))
     return np.vstack((top, bottom))
 
-def local_search_random_unique(M,matrice_init, voisinage, max_attempts=100):
+def local_search_random_unique(M,matrice_init, voisinage, max_attempts=200):
     """
     Recherche locale aléatoire avec évitement des répétitions.
 
@@ -154,6 +155,7 @@ def generate_initial_P(M, line_labels, col_labels,noise_prob = 0):
 
 def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,time,max_depth,n_parents, parent_init = None,method_next_gen = "Best"):
     diffusion =0
+    choose_cross = 0
     if parent_init is None:
         # Clustering des lignes et des colonnes
         line_labels = clustering_lines(M, n_clusters)
@@ -174,7 +176,7 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
             pass
         random.shuffle(parents)
         #Creation enfants
-        methode_cross = list_methode_cross[t%len(list_methode_cross)]
+        methode_cross = list_methode_cross[choose_cross%len(list_methode_cross)]
         enfants = methode_cross(parents)
         random.shuffle(enfants)
         enfants,enfants_mute = enfants[:int(len(enfants)*mutation_rate)],enfants[int(len(enfants)*mutation_rate):]
@@ -246,9 +248,12 @@ def genetique(M,n_clusters,voisinage,list_methode_cross,mutation_rate,memetique,
         print(f"{t} sur {time}")
         if compareP1betterthanP2(M,parents[0],best_matrice ):
             best_matrice = parents[0].copy()
+            
             print(fobj(M,best_matrice))
             print(methode_cross.__name__)
             print(f"improve")
+        else:
+            choose_cross += 1
 
     count_dict = {}
     for matrice in parents:
@@ -751,35 +756,36 @@ def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
     n_not_best = 1
     for i in range(kmax):
         if voisinage_index == 0:
-            for _ in range(int(n_not_best**0.5)):
+            for _ in range(int(n_not_best**0.25)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
         elif voisinage_index == 1:
-            for _ in range(int(n_not_best**0.5)):
+            for _ in range(int(n_not_best**0.25)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[-n1,-n2] = -init_matrix[-n1,-n2]
         elif voisinage_index == 2:
-            for _ in range(int(n_not_best**0.5)):
+            for _ in range(int(n_not_best**0.25)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[-n1,n2] = -init_matrix[-n1,n2]
         elif voisinage_index == 3:
-            for _ in range(int(n_not_best**0.5)):
+            for _ in range(int(n_not_best**0.25)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[n1,-n2] = -init_matrix[n1,-n2]
         elif voisinage_index == 4:
-            for _ in range(int(n_not_best**0.5)):
+            for _ in range(int(n_not_best**0.25)):
                 l = random.randint(0,init_matrix.shape[1]-1)
                 init_matrix[l,:] = -init_matrix[l,:]
         elif voisinage_index == 5:
-            for _ in range(int(n_not_best**0.5)):
+            for _ in range(int(n_not_best**0.25)):
                 c = random.randint(0,init_matrix.shape[0]-1)
                 init_matrix[:,c] = -init_matrix[:,c]
         
         
-        init_matrix = full_local_search(M,init_matrix, voisinage,max_depth)
+        #init_matrix = full_local_search(M,init_matrix, voisinage,max_depth)
+        init_matrix = greedy(M,init_matrix,0,True)
         # if compareP1betterthanP2(M, init_matrix_2, init_matrix):
         #     pass
         # else:
@@ -952,13 +958,14 @@ def Clustermethod(M, n_clusters):
     return cluster
 
 list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
-
+import time
+a = time.time()
 liste_method = []
 print("Start Johan")
 johan_method = Johanmethod(best_param=True)
 print(fobj(M,johan_method))
 print("Start Genetique")
-genetique_method = genetique(M,2,0,list_cross,0.20,False,500,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
+genetique_method = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
 print(fobj(M,genetique_method))
 cluster_method = Clustermethod(M,n_clusters=2)
 print(fobj(M,cluster_method))
@@ -980,3 +987,7 @@ print(fobj(reel_matrix,genetique_matrix))
 VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
 print(fobj(M,VNS_matrix))
 print(f"And Johan was {fobj(M,johan_method)}")
+print(f"time {time.time()-a}")
+
+#%%
+pat_ledm_method = pat_ledm(M)
