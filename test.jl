@@ -3,6 +3,7 @@ include("utils.jl")
 using Base.Threads
 using Dates
 ENV["JULIA_NUM_THREADS"] = 24
+println("thread: $(Threads.nthreads())")
 
 function perm(type, mat, index, index2=69)
     tmp = copy(mat)
