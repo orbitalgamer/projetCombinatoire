@@ -23,6 +23,7 @@ best_sol_list = []
 #reel_matrix = random_matrix(50,50,3)
 
 
+
 def divide_matrix_line(matrix):
     m,n = matrix.shape
     m= m//2
@@ -874,7 +875,7 @@ def GenerationParents(M,nombre,methods):
 
 
 
-def Johanmethod(debug = True,best_param = False,pattern = None, matrix = None):
+def Johanmethod(matrix, debug = True,best_param = False,pattern = None):
     debug=debug
     best_param=best_param
     metah=0 #0 for greedy, 1 for tabu, 2 for local search
@@ -960,40 +961,66 @@ def Clustermethod(M, n_clusters):
     cluster = generate_initial_P(M, line_labels, col_labels)
     return cluster
 
+if __name__=="__main__":
+    M = reel_matrix
+    list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
+    import time
+    a = time.time()
+    liste_method = []
+    print("Start Johan")
+    johan_method = Johanmethod(best_param=True, matrix=M)
+    print(fobj(M,johan_method))
+    print("Start Genetique")
+    genetique_method = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
+    print(fobj(M,genetique_method))
+    cluster_method = Clustermethod(M,n_clusters=2)
+    print(fobj(M,cluster_method))
+    liste_method.append(johan_method)
+    liste_method.append(genetique_method)
+    liste_method.append(cluster_method)
+    liste_method.append(np.ones(M.shape))
+    liste_method.append(np.ones(M.shape)*(-1))
 
-M= utils.lire_fichier("data/Hao.txt")
+    parents = GenerationParents(M,100,liste_method)
+    temp = [None]
+    temp.append(parents)
+    parents = temp
+    genetique_matrix = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
+    print(fobj(M,genetique_matrix ))
 
-list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
-import time
-a = time.time()
-liste_method = []
-print("Start Johan")
-johan_method = Johanmethod(best_param=True, matrix=M)
-print(fobj(M,johan_method))
-print("Start Genetique")
-genetique_method = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
-print(fobj(M,genetique_method))
-cluster_method = Clustermethod(M,n_clusters=2)
-print(fobj(M,cluster_method))
-liste_method.append(johan_method)
-liste_method.append(genetique_method)
-liste_method.append(cluster_method)
-liste_method.append(np.ones(M.shape))
-liste_method.append(np.ones(M.shape)*(-1))
-
-parents = GenerationParents(M,100,liste_method)
-temp = [None]
-temp.append(parents)
-parents = temp
-genetique_matrix = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
-print(fobj(M,genetique_matrix ))
-
-print(fobj(M,genetique_matrix))
 
 VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
 print(fobj(M,VNS_matrix))
 print(f"And Johan was {fobj(M,johan_method)}")
-print(f"time {time.time()-a}")
 
-#%%
-pat_ledm_method = pat_ledm(M)
+
+def run(Mat):
+    list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
+
+    liste_method = []
+    print("Start Johan")
+    johan_method = Johanmethod(best_param=True, matrix=Mat)
+    print(fobj(Mat,johan_method))
+    print("Start Genetique")
+    genetique_method = genetique(Mat,2,0,list_cross,0.20,False,500,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
+    print(fobj(Mat,genetique_method))
+    cluster_method = Clustermethod(M,n_clusters=2)
+    print(fobj(Mat,cluster_method))
+    liste_method.append(johan_method)
+    liste_method.append(genetique_method)
+    liste_method.append(cluster_method)
+    liste_method.append(np.ones(M.shape))
+    liste_method.append(np.ones(M.shape)*(-1))
+
+    parents = GenerationParents(Mat,100,liste_method)
+    temp = [None]
+    temp.append(parents)
+    parents = temp
+    genetique_matrix = genetique(Mat,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
+    print(fobj(M,genetique_matrix ))
+
+
+    VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
+    print(fobj(Mat,VNS_matrix))
+    print(f"And Johan was {fobj(Mat,johan_method)}")
+    return VNS_matrix #return la meilleur matrice
