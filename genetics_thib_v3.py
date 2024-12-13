@@ -16,11 +16,13 @@ best_sol_list = []
 #reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/ledm6_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
-reel_matrix = LEDM(32,32)
+
+#reel_matrix = LEDM(120,120)
 #reel_matrix = reel_matrix.transpose()
 #reel_matrix = matrices2_slackngon(16)
 #reel_matrix = random_matrix(50,50,3)
-M = reel_matrix
+
+
 
 def divide_matrix_line(matrix):
     m,n = matrix.shape
@@ -756,36 +758,36 @@ def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
     n_not_best = 1
     for i in range(kmax):
         if voisinage_index == 0:
-            for _ in range(int(n_not_best**0.25)):
+            for _ in range(int(n_not_best**0.33)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
         elif voisinage_index == 1:
-            for _ in range(int(n_not_best**0.25)):
+            for _ in range(int(n_not_best**0.33)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[-n1,-n2] = -init_matrix[-n1,-n2]
         elif voisinage_index == 2:
-            for _ in range(int(n_not_best**0.25)):
+            for _ in range(int(n_not_best**0.33)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[-n1,n2] = -init_matrix[-n1,n2]
         elif voisinage_index == 3:
-            for _ in range(int(n_not_best**0.25)):
+            for _ in range(int(n_not_best**0.33)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[n1,-n2] = -init_matrix[n1,-n2]
         elif voisinage_index == 4:
-            for _ in range(int(n_not_best**0.25)):
-                l = random.randint(0,init_matrix.shape[1]-1)
+            for _ in range(int(n_not_best**0.33)):
+                l = random.randint(0,init_matrix.shape[0]-1)
                 init_matrix[l,:] = -init_matrix[l,:]
         elif voisinage_index == 5:
-            for _ in range(int(n_not_best**0.25)):
-                c = random.randint(0,init_matrix.shape[0]-1)
+            for _ in range(int(n_not_best**0.33)):
+                c = random.randint(0,init_matrix.shape[1]-1)
                 init_matrix[:,c] = -init_matrix[:,c]
         
         
         #init_matrix = full_local_search(M,init_matrix, voisinage,max_depth)
-        init_matrix = greedy(M,init_matrix,0,True)
+        init_matrix = greedy(M,init_matrix,0,False)
         # if compareP1betterthanP2(M, init_matrix_2, init_matrix):
         #     pass
         # else:
@@ -796,6 +798,7 @@ def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
             best_matrix = init_matrix.copy()
             n_not_best = 1
             print(f"improve by voisinage {voisinage_index}")
+            utils.ecrire_fichier("solution.txt",M,best_matrix)
         else:
             init_matrix = best_matrix.copy()
             if n_clusters < 150:
@@ -872,13 +875,14 @@ def GenerationParents(M,nombre,methods):
 
 
 
-def Johanmethod(debug = True,best_param = False,pattern = None, matrix = M):
+def Johanmethod(matrix, debug = True,best_param = False,pattern = None):
     debug=debug
     best_param=best_param
     metah=0 #0 for greedy, 1 for tabu, 2 for local search
     matrix = matrix
     if pattern == None:
-        pattern=np.ones(matrix.shape)
+        #pattern=np.ones(matrix.shape)
+        pattern=np.random.choice([-1,1],size=M.shape)
     else:
         pattern = pattern
     if best_param:
@@ -934,7 +938,7 @@ def Johanmethod(debug = True,best_param = False,pattern = None, matrix = M):
     if debug:
         start_time=time.time()
         if not best_param:
-            size_best=10
+            size_best=15
             setup_break_best=0 #0,1,2 or 3
             la_totale_best=True #True or False
         if metah==0:
@@ -957,37 +961,66 @@ def Clustermethod(M, n_clusters):
     cluster = generate_initial_P(M, line_labels, col_labels)
     return cluster
 
-list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
-import time
-a = time.time()
-liste_method = []
-print("Start Johan")
-johan_method = Johanmethod(best_param=True)
-print(fobj(M,johan_method))
-print("Start Genetique")
-genetique_method = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
-print(fobj(M,genetique_method))
-cluster_method = Clustermethod(M,n_clusters=2)
-print(fobj(M,cluster_method))
-liste_method.append(johan_method)
-liste_method.append(genetique_method)
-liste_method.append(cluster_method)
-liste_method.append(np.ones(M.shape))
-liste_method.append(np.ones(M.shape)*(-1))
+if __name__=="__main__":
+    M = reel_matrix
+    list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
+    import time
+    a = time.time()
+    liste_method = []
+    print("Start Johan")
+    johan_method = Johanmethod(best_param=True, matrix=M)
+    print(fobj(M,johan_method))
+    print("Start Genetique")
+    genetique_method = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
+    print(fobj(M,genetique_method))
+    cluster_method = Clustermethod(M,n_clusters=2)
+    print(fobj(M,cluster_method))
+    liste_method.append(johan_method)
+    liste_method.append(genetique_method)
+    liste_method.append(cluster_method)
+    liste_method.append(np.ones(M.shape))
+    liste_method.append(np.ones(M.shape)*(-1))
 
-parents = GenerationParents(M,100,liste_method)
-temp = [None]
-temp.append(parents)
-parents = temp
-genetique_matrix = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
-print(fobj(M,genetique_matrix ))
+    parents = GenerationParents(M,100,liste_method)
+    temp = [None]
+    temp.append(parents)
+    parents = temp
+    genetique_matrix = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
+    print(fobj(M,genetique_matrix ))
 
-print(fobj(reel_matrix,genetique_matrix))
 
 VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
 print(fobj(M,VNS_matrix))
 print(f"And Johan was {fobj(M,johan_method)}")
-print(f"time {time.time()-a}")
 
-#%%
-pat_ledm_method = pat_ledm(M)
+
+def run(Mat):
+    list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
+
+    liste_method = []
+    print("Start Johan")
+    johan_method = Johanmethod(best_param=True, matrix=Mat)
+    print(fobj(Mat,johan_method))
+    print("Start Genetique")
+    genetique_method = genetique(Mat,2,0,list_cross,0.20,False,500,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
+    print(fobj(Mat,genetique_method))
+    cluster_method = Clustermethod(M,n_clusters=2)
+    print(fobj(Mat,cluster_method))
+    liste_method.append(johan_method)
+    liste_method.append(genetique_method)
+    liste_method.append(cluster_method)
+    liste_method.append(np.ones(M.shape))
+    liste_method.append(np.ones(M.shape)*(-1))
+
+    parents = GenerationParents(Mat,100,liste_method)
+    temp = [None]
+    temp.append(parents)
+    parents = temp
+    genetique_matrix = genetique(Mat,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
+    print(fobj(M,genetique_matrix ))
+
+
+    VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
+    print(fobj(Mat,VNS_matrix))
+    print(f"And Johan was {fobj(Mat,johan_method)}")
+    return VNS_matrix #return la meilleur matrice

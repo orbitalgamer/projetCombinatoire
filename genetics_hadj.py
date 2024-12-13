@@ -9,7 +9,7 @@ import utils
 #reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/ledm6_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
-reel_matrix = LEDM(20,120)
+reel_matrix = LEDM(20,20)
 #reel_matrix = reel_matrix.transpose()
 #reel_matrix = matrices2_slackngon(7)
 #reel_matrix = random_matrix(25,25,5)
@@ -517,7 +517,7 @@ list_sol = list()
 # liste_parent = [None]
 # for i in range(1):
 # #     liste_parent.append(_random_matrix(100))
-genetique_matrix = genetique(M,2,0,list_cross,0.20,False,100,max_depth=10   ,n_parents = 50,parent_init=None,method_next_gen="roulette")
+genetique_matrix = genetique(M,2,0,list_cross,0.20,False,100,max_depth=10,n_parents = 100,parent_init=None,method_next_gen="Best")
 print(fobj(M,genetique_matrix))
 
 # print(fobj(reel_matrix,sol))
