@@ -191,10 +191,10 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 
 # matrix=utils.lire_fichier("data/exempleslide_matrice (1).txt")
 # matrix=utils.lire_fichier("data/ledm6_matrice (1).txt")
-# matrix=utils.lire_fichier("data/correl5_matrice.txt")
+matrix=utils.lire_fichier("data/correl5_matrice.txt")
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
 # matrix=matrices2_slackngon(5)
-matrix=utils.LEDM (32,32)
+# matrix=utils.LEDM (120,120)
 # matrix=utils.random_matrix(120,120,2)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
@@ -259,9 +259,9 @@ if best_param:
 if debug:
     start_time=time.time()
     if not best_param:
-        size_best=30
+        size_best=15
         setup_break_best=0 #0,1,2 or 3
-        la_totale_best=False #True or False
+        la_totale_best=True #True or False
     if metah==0:
         (pattern_tmp,p)=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale_best),verbose=True)
     elif metah==1:
@@ -271,6 +271,7 @@ if debug:
     end_time=time.time()
     print(fobj(matrix,pattern_tmp))
     print(f"temps de calcul pour calculer solution= {end_time-start_time}s")
+    print(f"param size={size_best} setup_break={setup_break_best} and la_totale={la_totale_best}")
 
 utils.ecrire_fichier("solution.txt",matrix,pattern_tmp)
 
