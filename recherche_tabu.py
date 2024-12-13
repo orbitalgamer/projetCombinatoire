@@ -2,7 +2,7 @@ import numpy as np
 import random
 from opti_combi_projet_pythoncode_texte import fobj
 from collections import deque
-from utils import random_matrix
+from utils import random_matrix, LEDM
 from numba import njit
 from sklearn.cluster import KMeans
 
@@ -41,7 +41,8 @@ def tabou_search(matrice):
         return hash(m.tobytes())
 
     P = np.random.choice([1,-1], size=matrice.shape) #init P
-    P = generate_initial_P(matrice, 2)
+    P = np.ones(matrice.shape)
+    # P = generate_initial_P(matrice, 2)
     bestP= P.copy()
 
     bestValue= (990,1e38)
@@ -50,10 +51,10 @@ def tabou_search(matrice):
     listTaboue = deque(maxlen=10)
     mouventTaboue = set()
     max_iter=50000
-    voisinage_size = 100
+    voisinage_size = 10
 
     for a in range(max_iter):
-        if not a % 1000:
+        if not a % 10000:
             print(f"currently at {a}")
         mouventTaboue.clear() #reset mouvement
         
@@ -98,7 +99,8 @@ def tabou_search(matrice):
             #         
     return bestP, bestValue
 
-M = random_matrix(7,7,3)
+M = random_matrix(20,20,5)
+M = LEDM(20,20)
 P, bestValue = tabou_search(M)
 
 print(f"best_rank={bestValue[0]}, singulare value = {bestValue[1]}")

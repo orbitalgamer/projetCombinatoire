@@ -193,13 +193,14 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 # matrix=utils.lire_fichier("data/ledm6_matrice (1).txt")
 # matrix=utils.lire_fichier("data/correl5_matrice.txt")
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
-matrix=matrices2_slackngon(29)
-# matrix=utils.LEDM (30,30)
-# matrix=utils.random_matrix(30,30,2)
+# matrix=matrices2_slackngon(5)
+matrix=utils.LEDM (10,10)
+# matrix=utils.random_matrix(120,120,2)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
 pattern=np.ones(matrix.shape)
 # pattern=utils.generate_initial_P(matrix,2,2)
+# pattern=utils.pat_ledm(matrix) #best solution for LEDM
 print(fobj(matrix,pattern))
 
 debug=True
@@ -243,12 +244,12 @@ if best_param:
         la_totale=[False,True]
         size=range(2,max(matrix.shape)+1)
         param=itertools.product(la_totale,size)
-        data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(recherche_locale,matrix,pattern,(i[1],i[0],'/')) for i in param)
+        data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(recherche_locale,matrix,pattern,(i[1],'/',i[0])) for i in param)
         for (pattern_tmp,p) in data:
             if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
                 pattern_best=copy.deepcopy(pattern_tmp)
                 size_best=p[0]
-                la_totale_best=p[1]
+                la_totale_best=p[2]
                 print(f"for param size={size_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
         print(f"param opti: size={size_best} and la_totale={la_totale_best}")
 
@@ -258,8 +259,8 @@ if best_param:
 if debug:
     start_time=time.time()
     if not best_param:
-        size_best=5
-        setup_break_best=2 #0,1,2 or 3
+        size_best=30
+        setup_break_best=0 #0,1,2 or 3
         la_totale_best=False #True or False
     if metah==0:
         (pattern_tmp,p)=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale_best),verbose=True)

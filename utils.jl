@@ -21,15 +21,15 @@ end
 
 function LEDM(n,m)
     mat = zeros(n,m)
-    for i in 0:n
-        for j in 0:m
+    for i in 1:n
+        for j in 1:m
             mat[i,j]=(i-j)^2
         end
     end
     return mat
 end
 
-function random_matrix (m,n,r)
+function random_matrix(m,n,r)
     return ((10*rand(m,r)) * (10*rand(r,n)))^2
 end
 
@@ -91,7 +91,7 @@ function ecrire_fichier(file, matrix, P)
     # Écriture de la matrice P dans le fichier
     for i in 1:Sh[1]
         for j in 1:Sh[2]
-            write(openfile, "$Int(P[i,j])")  # Écrire les valeurs de P
+            write(openfile, "$(P[i,j])")  # Écrire les valeurs de P
             if j != Sh[2]
                 write(openfile, " ")
             end
@@ -100,7 +100,7 @@ function ecrire_fichier(file, matrix, P)
     end
 
     # Calcul des valeurs singulières
-    S = svdvals(P .* sqrt(M))
+    S = svdvals(P .* sqrt.(matrix))
     
     # Écriture des valeurs singulières dans le fichier
     for s in S
