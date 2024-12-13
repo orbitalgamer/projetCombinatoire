@@ -755,6 +755,7 @@ def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
         init_matrix = init.copy()
     voisinage_index = 0
     best_matrix = init_matrix.copy()
+    utils.ecrire_fichier("solution.txt",M,best_matrix)
     n_not_best = 1
     for i in range(kmax):
         if voisinage_index == 0:
@@ -881,8 +882,8 @@ def Johanmethod(matrix, debug = True,best_param = False,pattern = None):
     metah=0 #0 for greedy, 1 for tabu, 2 for local search
     matrix = matrix
     if pattern == None:
-        #pattern=np.ones(matrix.shape)
-        pattern=np.random.choice([-1,1],size=M.shape)
+        pattern=np.ones(matrix.shape)
+        #pattern=np.random.choice([-1,1],size=M.shape)
     else:
         pattern = pattern
     if best_param:
@@ -962,13 +963,14 @@ def Clustermethod(M, n_clusters):
     return cluster
 
 if __name__=="__main__":
+    reel_matrix= utils.lire_fichier("data/Hao.txt")
     M = reel_matrix
     list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
     import time
     a = time.time()
     liste_method = []
     print("Start Johan")
-    johan_method = Johanmethod(best_param=True, matrix=M)
+    johan_method = Johanmethod(best_param=False, matrix=M)
     print(fobj(M,johan_method))
     print("Start Genetique")
     genetique_method = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
@@ -989,9 +991,9 @@ if __name__=="__main__":
     print(fobj(M,genetique_matrix ))
 
 
-VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
-print(fobj(M,VNS_matrix))
-print(f"And Johan was {fobj(M,johan_method)}")
+    VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
+    print(fobj(M,VNS_matrix))
+    print(f"And Johan was {fobj(M,johan_method)}")
 
 
 def run(Mat):
