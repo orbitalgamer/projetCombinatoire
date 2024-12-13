@@ -16,10 +16,12 @@ best_sol_list = []
 #reel_matrix= utils.lire_fichier("data/exempleslide_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/ledm6_matrice (1).txt")
 #reel_matrix= utils.lire_fichier("data/correl5_matrice.txt")
-reel_matrix = LEDM(32,32)
+
+#reel_matrix = LEDM(120,120)
 #reel_matrix = reel_matrix.transpose()
 #reel_matrix = matrices2_slackngon(16)
 #reel_matrix = random_matrix(50,50,3)
+
 
 
 def divide_matrix_line(matrix):
@@ -756,36 +758,36 @@ def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
     n_not_best = 1
     for i in range(kmax):
         if voisinage_index == 0:
-            for _ in range(int(n_not_best**0.25)):
+            for _ in range(int(n_not_best**0.33)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
         elif voisinage_index == 1:
-            for _ in range(int(n_not_best**0.25)):
+            for _ in range(int(n_not_best**0.33)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[-n1,-n2] = -init_matrix[-n1,-n2]
         elif voisinage_index == 2:
-            for _ in range(int(n_not_best**0.25)):
+            for _ in range(int(n_not_best**0.33)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[-n1,n2] = -init_matrix[-n1,n2]
         elif voisinage_index == 3:
-            for _ in range(int(n_not_best**0.25)):
+            for _ in range(int(n_not_best**0.33)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[n1,-n2] = -init_matrix[n1,-n2]
         elif voisinage_index == 4:
-            for _ in range(int(n_not_best**0.25)):
-                l = random.randint(0,init_matrix.shape[1]-1)
+            for _ in range(int(n_not_best**0.33)):
+                l = random.randint(0,init_matrix.shape[0]-1)
                 init_matrix[l,:] = -init_matrix[l,:]
         elif voisinage_index == 5:
-            for _ in range(int(n_not_best**0.25)):
-                c = random.randint(0,init_matrix.shape[0]-1)
+            for _ in range(int(n_not_best**0.33)):
+                c = random.randint(0,init_matrix.shape[1]-1)
                 init_matrix[:,c] = -init_matrix[:,c]
         
         
         #init_matrix = full_local_search(M,init_matrix, voisinage,max_depth)
-        init_matrix = greedy(M,init_matrix,0,True)
+        init_matrix = greedy(M,init_matrix,0,False)
         # if compareP1betterthanP2(M, init_matrix_2, init_matrix):
         #     pass
         # else:
@@ -796,6 +798,7 @@ def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
             best_matrix = init_matrix.copy()
             n_not_best = 1
             print(f"improve by voisinage {voisinage_index}")
+            utils.ecrire_fichier("solution.txt",M,best_matrix)
         else:
             init_matrix = best_matrix.copy()
             if n_clusters < 150:
@@ -878,7 +881,8 @@ def Johanmethod(matrix, debug = True,best_param = False,pattern = None):
     metah=0 #0 for greedy, 1 for tabu, 2 for local search
     matrix = matrix
     if pattern == None:
-        pattern=np.ones(matrix.shape)
+        #pattern=np.ones(matrix.shape)
+        pattern=np.random.choice([-1,1],size=M.shape)
     else:
         pattern = pattern
     if best_param:
@@ -934,7 +938,7 @@ def Johanmethod(matrix, debug = True,best_param = False,pattern = None):
     if debug:
         start_time=time.time()
         if not best_param:
-            size_best=10
+            size_best=15
             setup_break_best=0 #0,1,2 or 3
             la_totale_best=True #True or False
         if metah==0:
@@ -960,8 +964,8 @@ def Clustermethod(M, n_clusters):
 if __name__=="__main__":
     M = reel_matrix
     list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
-import time
-a = time.time()
+    import time
+    a = time.time()
     liste_method = []
     print("Start Johan")
     johan_method = Johanmethod(best_param=True, matrix=M)
