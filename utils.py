@@ -19,8 +19,8 @@ def lire_fichier(file):
 def ecrire_fichier(file,matrix,P):
     def fobj2(M,P,tol=1e-14):
       sing_values = np.linalg.svd(P*np.sqrt(M), compute_uv=False)
-      ind_nonzero = np.where(sing_values > tol)[0]                
-      return sing_values[ind_nonzero]  
+    #   ind_nonzero = np.where(sing_values > tol)[0]                
+      return sing_values  
   
     
     with open(file, "w") as f:
@@ -88,3 +88,14 @@ def generate_initial_P(M, n_clusters_line, n_clusters_columns,noise_prob=0):
                 P[i,j] = -P[i,j]
     return P
 
+def pat_ledm(M):
+    n,m=M.shape
+    pat=np.ones(M.shape)
+    for i in range(n):
+        middle=False
+        for j in range(m):
+            if M[i][j]==0:
+                middle=True
+            if middle:
+                pat[i][j]*=-1
+    return pat

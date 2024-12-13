@@ -4,6 +4,7 @@ __pycache__/
 opti_combi_projet_pythoncode_texte.py
 *.pyc
 solution.txt
+solution_julia.txt
 best_parameter_johan.txt
 
 # Ignorer les dossiers __pycache__ (générés par Python)
