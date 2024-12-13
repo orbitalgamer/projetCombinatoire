@@ -194,7 +194,7 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 # matrix=utils.lire_fichier("data/correl5_matrice.txt")
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
 # matrix=matrices2_slackngon(5)
-matrix=utils.LEDM (10,10)
+matrix=utils.LEDM (32,32)
 # matrix=utils.random_matrix(120,120,2)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
