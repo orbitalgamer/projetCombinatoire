@@ -848,8 +848,8 @@ def recherche_kmins(M,n_clusters,max_iter):
 #reel_matrix = matrices1_ledm(25)
 def Bruiteur_matrix(matrice,noise_prob):
     P = matrice.copy()
-    for i in range(M.shape[0]):
-        for j in range(M.shape[1]):
+    for i in range(matrice.shape[0]):
+        for j in range(matrice.shape[1]):
             if np.random.rand() < noise_prob:  # Avec une certaine probabilité, changer le cluster
                 P[i,j] = -P[i,j]
     return P
@@ -882,7 +882,7 @@ def Johanmethod(matrix, debug = True,best_param = False,pattern = None):
     matrix = matrix
     if pattern == None:
         #pattern=np.ones(matrix.shape)
-        pattern=np.random.choice([-1,1],size=M.shape)
+        pattern=np.random.choice([-1,1],size=matrix.shape)
     else:
         pattern = pattern
     if best_param:
@@ -962,7 +962,7 @@ def Clustermethod(M, n_clusters):
     return cluster
 
 if __name__=="__main__":
-    M = reel_matrix
+    M = LEDM(32,32)
     list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
     import time
     a = time.time()
@@ -989,9 +989,9 @@ if __name__=="__main__":
     print(fobj(M,genetique_matrix ))
 
 
-VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
-print(fobj(M,VNS_matrix))
-print(f"And Johan was {fobj(M,johan_method)}")
+    VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
+    print(fobj(M,VNS_matrix))
+    print(f"And Johan was {fobj(M,johan_method)}")
 
 
 def run(Mat):
@@ -1004,23 +1004,23 @@ def run(Mat):
     print("Start Genetique")
     genetique_method = genetique(Mat,2,0,list_cross,0.20,False,500,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
     print(fobj(Mat,genetique_method))
-    cluster_method = Clustermethod(M,n_clusters=2)
+    cluster_method = Clustermethod(Mat,n_clusters=2)
     print(fobj(Mat,cluster_method))
     liste_method.append(johan_method)
     liste_method.append(genetique_method)
     liste_method.append(cluster_method)
-    liste_method.append(np.ones(M.shape))
-    liste_method.append(np.ones(M.shape)*(-1))
+    liste_method.append(np.ones(Mat.shape))
+    liste_method.append(np.ones(Mat.shape)*(-1))
 
     parents = GenerationParents(Mat,100,liste_method)
     temp = [None]
     temp.append(parents)
     parents = temp
     genetique_matrix = genetique(Mat,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
-    print(fobj(M,genetique_matrix ))
+    print(fobj(Mat,genetique_matrix ))
 
 
-    VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
+    VNS_matrix = VNS(Mat,2,0,1000,max_depth = 10,init = genetique_matrix)
     print(fobj(Mat,VNS_matrix))
     print(f"And Johan was {fobj(Mat,johan_method)}")
     return VNS_matrix #return la meilleur matrice
