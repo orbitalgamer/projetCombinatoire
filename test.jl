@@ -190,13 +190,18 @@ end
 
 #subdivise en sous matrice
 function subdivise_mat(mat, s)
+    x=div(size(mat,1),s)
+    if size(mat,1)%s!=0
+        x+=1
+    end
+    y=div(size(mat,2),s)
+    if size(mat,2)%s!=0
+        y+=1
+    end
     list_mat = []
-    for i in 0:(div(size(mat,1),s)-1)
-        for j in 0:(div(size(mat,1), s)-1)
-            tmp = mat[i*s+1:(i+1)*s, j*s+1:(j+1)*s] #remarque dernière tranche inclu de base en julia
-            if !isempty(tmp)
-                push!(list_mat, tmp)
-            end
+    for i in 0:x-1
+        for j in 0:y-1
+            push!(list_mat,mat[i*s+1:min(size(mat,1),(i+1)*s), j*s+1:min(size(mat,2),(j+1)*s)]) #remarque dernière tranche inclu de base en julia
         end
     end
     return list_mat
@@ -238,7 +243,7 @@ function Resolve_metaheuristic(funct, matrix, pattern, param, verbose=false)
 end
 
 function main()
-    matrix = LEDM(10,10)
+    matrix = LEDM(32,32)
 
     pattern = ones(size(matrix))
 
@@ -246,7 +251,7 @@ function main()
 
     debug = true
     best_param = true
-    metah = 2
+    metah = 0
 
     if best_param
         start_time = time()
@@ -263,14 +268,14 @@ function main()
 
             for (patter_tmp, p) in data
                 if compareP1betterthanP2(matrix, patter_tmp, pattern_best)
-                    patter_best = copy(patter_tmp)
+                    pattern_best = copy(patter_tmp)
                     size_best=p[1]
                     setup_break_best = p[2]
                     la_totale_best = p[3]
-                    print("for param size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best rank : $(fobj(matrix,patter_best)[1]), valeur min = $(fob(matrix, patter_best)[2])")
+                    println("for param size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best rank : $(fobj(matrix,pattern_best)[1]), valeur min = $(fobj(matrix, pattern_best)[2])")
                 end
             end
-            print("param opti size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best")
+            println("param opti size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best")
         elseif metah == 2
             data = []
             @threads for i in CartesianIndices((2:maximum(size(matrix)),0:1))
@@ -283,23 +288,23 @@ function main()
             
             for (patter_tmp, p) in data
                 if compareP1betterthanP2(matrix, patter_tmp, pattern_best)
-                    patter_best = copy(patter_tmp)
+                    pattern_best = copy(patter_tmp)
                     size_best=p[1]
                     setup_break_best = p[2]
                     la_totale_best = p[3]
-                    print("fo param size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best rank : $(fobj(matrix,patter_best)[1]), valeur min = $(fob(matrix, patter_best)[2])")
+                    println("fo param size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best rank : $(fobj(matrix,pattern_best)[1]), valeur min = $(fobj(matrix, pattern_best)[2])")
                 end
             end
-            print("fo param size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best")
+            println("fo param size=$size_best, setup_break=$setup_break_best and la_totale=$la_totale_best")
         end
-        print(fobj(matrix, patter_best))
-        print("took to optimize $(time()-start_time)")
+        println(fobj(matrix, pattern_best))
+        println("took to optimize $(time()-start_time)")
     end
 
     if debug
         start_time = time()
         if !best_param
-            size_best=30
+            size_best=6
             setup_break_best=0
             la_totale_best=false
         end
