@@ -13,12 +13,18 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from joblib import Parallel, delayed
 
-from utils import LEDM, random_matrix
+from utils import LEDM, random_matrix, ecrire_fichier
 
-from metaheuristic_johan import init_johan
+from backup import init_johan
+
+# from metaheuristic_johan import init_johan
 
 import warnings
 warnings.filterwarnings("ignore")
+
+from collections import deque
+
+
 
 def matrices1_ledm(n):
   M  = np.zeros((n,n))
@@ -40,12 +46,13 @@ def matrices2_slackngon(n):
       M[i,0] = 0
   return M
 
-def fobj(M,P,tol=1e-14, all_sng=False):
-  sing_values = np.linalg.svd(P*np.sqrt(M), compute_uv=False) # Calcul des valeurs singulières de la matrice P.*sqrt(M)
-  ind_nonzero = np.where(sing_values > tol)[0]                # indices des valeurs > tolérance donnée
-  if all_sng:
-    print(f"all singular martrix {sing_values[np.where(sing_values > tol)]}")
-  return len(ind_nonzero), sing_values[ind_nonzero[-1]]       # on retourne objectif1=rang et objectif2=plus petite val sing. non-nulle
+def fobj(M,P,tol=1e-10, all_sng=False, verbose=False):
+  sing_values = np.linalg.svd(P*np.sqrt(M), compute_uv=False)    # Calcul des valeurs singulières de la matrice P.*sqrt(M)
+  tol         = max(M.shape)*sing_values[0]*np.finfo(float).eps  # Calcul de la tolérance à utiliser pour la matrice P*sqrt(M)
+  ind_nonzero = np.where(sing_values > tol)[0]                   # indices des valeurs > tolérance
+  if verbose:
+      print(f"tol = {tol} and worst sing value = {sing_values[ind_nonzero[-1]]}")
+  return len(ind_nonzero), sing_values[ind_nonzero[-1]]  
 
 
 
@@ -110,19 +117,24 @@ def generate_P_pair_wise(M):
 
 
 
-def recuit_simule(Mprime, Pinit=None, test=False):
+def recuit_simule(Mprime, Pinit=None, test=False, verbose=False):
+    def get_hash(m):
+        return hash(m.tobytes())
+
     
     cluster = 2
     
     initP = generate_initial_P(Mprime, cluster)
     # initP = generate_P_pair_wise(Mprime)
-    # initP = init_johan(Mprime, initP, 2)
+    initP = init_johan(Mprime, initP, 4)
+    # initP = np.ones(Mprime.shape)
+    # initP = np.random.choice([-1,1], size=Mprime.shape)
     if test== True:
         initP=Pinit
     
-    Tinit = 100
+    Tinit = 1000
     Tf = 1e-6
-    alpha = 0.9
+    alpha = 0.90
     best = np.zeros(Mprime.shape)
     best_rank = np.inf
     best_sing_value = np.inf
@@ -133,26 +145,29 @@ def recuit_simule(Mprime, Pinit=None, test=False):
     
     tmp = np.ones(Mprime.shape)
     
+    
+
     previous_score = np.inf
     
-    palier = 500
+    palier = 200
     
     n_permut = 1
     
-    superPalier = 40
+    superPalier = 20
     superPalierCount = 0
     
-    alltest = []
+    
     
     amelioration = 0
     
     Temperature = Tinit
     while Temperature>Tf:
-        tmp = current.copy() #backup
+        
         
         for _ in range(palier):
-            choix= random.randrange(3)
-            choix = 0
+            tmp = current.copy() #backup
+            choix= random.randrange(0,3)
+            # choix = 
             if choix == 0:    
                 i = random.randrange(current.shape[0])
                 j = random.randrange(current.shape[1])
@@ -166,7 +181,7 @@ def recuit_simule(Mprime, Pinit=None, test=False):
       
             # tmp  = np.random.choice([-1,1], size=Mprime.shape)
             tmp_rank, tmp_sing_value = fobj(Mprime, tmp)
-            alltest.append(tmp_sing_value)
+            
             
             #si meilleur stock
             if tmp_rank<current_rank or (tmp_rank == current_rank and tmp_sing_value<=current_sing_value):
@@ -176,7 +191,7 @@ def recuit_simule(Mprime, Pinit=None, test=False):
                 current_sing_value = tmp_sing_value
             else:
                 if tmp_rank == current_rank:
-                    proba = np.exp(-((tmp_sing_value-current_sing_value)*10/current_sing_value)/Temperature)
+                    proba = np.exp(-((tmp_sing_value-current_sing_value)*100/current_sing_value)/Temperature)
                     # print(((tmp_sing_value-current_sing_value)/current_sing_value))
                 else:
                     proba = np.exp(-(tmp_rank-current_rank)*10/Temperature)
@@ -193,11 +208,11 @@ def recuit_simule(Mprime, Pinit=None, test=False):
                 best = current.copy()
                 best_rank = current_rank
                 best_sing_value = current_sing_value
-                print(f" better found !  best_rank={best_rank}, best_sing = {best_sing_value}")
+                if verbose: print(f" better found !  best_rank={best_rank}, best_sing = {best_sing_value}")
                 # fobj(Mprime, best, all_sng=True)
                 amelioration =0
-        # if best_rank == 2:
-        #     break
+        if best_rank == 2:
+            break
         amelioration+=1
         if amelioration > 5: #recharge meilleur si avance plus
             current=best.copy()
@@ -210,7 +225,7 @@ def recuit_simule(Mprime, Pinit=None, test=False):
         if(superPalierCount < superPalier and not Temperature>Tf):
             Temperature=Tinit
             superPalierCount+=1
-            print(f"new palier and current rank = {current_rank} and best_rank={best_rank}, best_sing = {best_sing_value}")
+            if verbose: print(f"new palier and current rank = {current_rank} and best_rank={best_rank}, best_sing = {best_sing_value}")
             
         # print(f"Temperature = {Temperature}, current rank = {current_rank}, best_rank={best_rank}, best_sing = {best_sing_value}")
     return best
@@ -235,15 +250,58 @@ def split_matrix_into_blocks(M):
     return A, B, C, D
 
 
-Mprime = np.array([[16,4,1,25,4], [16,4,4,36,0], [0,0,9,1,4], [36,9,0,64,4], [16,4,1,25,4], [4,1,49,25,16]])
+def split_matrix_with_padding(matrix, block_size, padding_value=0):
+    rows, cols = matrix.shape
+    block_rows, block_cols = block_size
 
-Mprime=LEDM(4, 120)
+    # Calcul des nouvelles dimensions (avec padding si nécessaire)
+    padded_rows = ((rows + block_rows - 1) // block_rows) * block_rows
+    padded_cols = ((cols + block_cols - 1) // block_cols) * block_cols
+
+    # Ajouter du padding
+    padded_matrix = np.full((padded_rows, padded_cols), padding_value, dtype=matrix.dtype)
+    padded_matrix[:rows, :cols] = matrix
+
+    # Diviser la matrice remplie en blocs
+    blocks = [
+        padded_matrix[i:i+block_rows, j:j+block_cols]
+        for i in range(0, padded_rows, block_rows)
+        for j in range(0, padded_cols, block_cols)
+    ]
+    return blocks, (padded_rows, padded_cols)  # Retourne aussi la nouvelle taille
+
+def reconstruct_matrix_without_padding(blocks, original_shape, block_size):
+    rows, cols = original_shape
+    block_rows, block_cols = block_size
+
+    # Calcul des dimensions de la matrice avec padding
+    padded_rows = ((rows + block_rows - 1) // block_rows) * block_rows
+    padded_cols = ((cols + block_cols - 1) // block_cols) * block_cols
+
+    # Reconstituer la matrice remplie
+    reconstructed_matrix = np.zeros((padded_rows, padded_cols), dtype=blocks[0].dtype)
+    idx = 0
+    for i in range(0, padded_rows, block_rows):
+        for j in range(0, padded_cols, block_cols):
+            reconstructed_matrix[i:i+block_rows, j:j+block_cols] = blocks[idx]
+            idx += 1
+
+    # Supprimer le padding
+    return reconstructed_matrix[:rows, :cols]
+
+
+Mprime = np.array([[16,4,1,25,4], [16,4,4,36,0], [0,0,9,1,4], [36,9,0,64,4], [16,4,1,25,4], [4,1,49,25,16]])
+# Mprime = matrices2_slackngon(70)
+Mprime=LEDM(70, 70)
+# Mprime = random_matrix(20, 20, 5)
+block_size = (7,7)
 
 # Mprime = random_matrix(32,32,10)
 
 
 # print("start")
-# chunks = split_matrix_into_blocks(Mprime)  # adjust chunk size based on available cores
+# chunks = split_matrix_into_blocks(Mprime)
+# # chunks = split_matrix_with_padding(Mprime, block_size)  # adjust chunk size based on available cores
 
 # results = Parallel(n_jobs=4)(delayed(recuit_simule)(chunk) for chunk in chunks)
 
@@ -253,18 +311,22 @@ Mprime=LEDM(4, 120)
 # bottom = np.hstack((results[2], results[3]))
 # Ptotal= np.vstack((top, bottom))
 
+# Ptotal = reconstruct_matrix(results, Mprime.shape, block_size)
 
-# # Ptotal = np.array(zip(**results))
-# # print(Ptotal)
+
 # total_rank, total_sing_value = fobj(Mprime, Ptotal)
 Ptotal = np.zeros((1,1))
-best_p = recuit_simule(Mprime, Ptotal.copy(), False)
+best_p = recuit_simule(Mprime, Ptotal.copy(), False, verbose=True)
 
-total_rank_2, total_sing_value_2 = fobj(Mprime, best_p)
+total_rank_2, total_sing_value_2 = fobj(Mprime, best_p, verbose=True)
 # print(f"avant recuit best_rank = {total_rank} avec sing value = {total_sing_value}")
 print(f"après recuit best_rank = {total_rank_2} avec sing value = {total_sing_value_2}")
 
+ecrire_fichier("test70LEDM.txt", Mprime, best_p)
 
+best_p_prime = init_johan(Mprime, best_p, 4)
+total_rank_3, total_sing_value_3 = fobj(Mprime, best_p_prime, verbose=True)
+print(f"après recuit best_rank = {total_rank_3} avec sing value = {total_sing_value_3}")
 
 
     
