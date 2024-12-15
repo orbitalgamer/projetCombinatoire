@@ -6,6 +6,7 @@ import copy
 import time
 from joblib import Parallel,delayed
 import itertools
+import pandas as pd
 
 def perm(type: int,mat:np.ndarray,index: int,index2=None):
     mat_tmp=copy.deepcopy(mat)
@@ -191,10 +192,10 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 
 # matrix=utils.lire_fichier("data/exempleslide_matrice (1).txt")
 # matrix=utils.lire_fichier("data/ledm6_matrice (1).txt")
-matrix=utils.lire_fichier("data/correl5_matrice.txt")
+# matrix=utils.lire_fichier("data/correl5_matrice.txt")
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
 # matrix=matrices2_slackngon(5)
-# matrix=utils.LEDM (120,120)
+matrix=utils.LEDM (32,32)
 # matrix=utils.random_matrix(120,120,2)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
@@ -218,6 +219,8 @@ if best_param:
         size=range(2,max(matrix.shape)+1)
         param=itertools.product(la_totale,setup_break,size)
         data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(greedy,matrix,pattern,(i[2],i[1],i[0])) for i in param)
+        df=pd.DataFrame(([(fobj(matrix,data[i][0])[0],fobj(matrix,data[i][0])[1],data[i][1][0],data[i][1][1],data[i][1][2]) for i in range(len(data))]),columns=['rank','sing_value','size','setup_break','la_totale'])
+        df.to_csv('Evolution_selon_param_greedy.csv',index=False)
         for (pattern_tmp,p) in data:
             if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
                 pattern_best=copy.deepcopy(pattern_tmp)
@@ -232,6 +235,8 @@ if best_param:
         size=range(2,max(matrix.shape)+1)
         param=itertools.product(queue,size)
         data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(tabu,matrix,pattern,(i[1],i[0],'/')) for i in param)
+        df=pd.DataFrame(([(fobj(matrix,data[i][0])[0],fobj(matrix,data[i][0])[1],data[i][1][0],data[i][1][1],data[i][1][2]) for i in range(len(data))]),columns=['rank','sing_value','size','setup_break','la_totale'])
+        df.to_csv('Evolution_selon_param_tabu.csv',index=False)
         for (pattern_tmp,p) in data:
             if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
                 pattern_best=copy.deepcopy(pattern_tmp)
@@ -245,6 +250,8 @@ if best_param:
         size=range(2,max(matrix.shape)+1)
         param=itertools.product(la_totale,size)
         data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(recherche_locale,matrix,pattern,(i[1],'/',i[0])) for i in param)
+        df=pd.DataFrame(([(fobj(matrix,data[i][0])[0],fobj(matrix,data[i][0])[1],data[i][1][0],data[i][1][1],data[i][1][2]) for i in range(len(data))]),columns=['rank','sing_value','size','setup_break','la_totale'])
+        df.to_csv('Evolution_selon_param_local_search.csv',index=False)
         for (pattern_tmp,p) in data:
             if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
                 pattern_best=copy.deepcopy(pattern_tmp)
@@ -259,9 +266,9 @@ if best_param:
 if debug:
     start_time=time.time()
     if not best_param:
-        size_best=15
+        size_best=2
         setup_break_best=0 #0,1,2 or 3
-        la_totale_best=True #True or False
+        la_totale_best=False #True or False
     if metah==0:
         (pattern_tmp,p)=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale_best),verbose=True)
     elif metah==1:
