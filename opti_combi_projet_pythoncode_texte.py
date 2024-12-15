@@ -34,6 +34,8 @@ def fobj(M,P):
   sing_values = np.linalg.svd(P*np.sqrt(M), compute_uv=False)    # Calcul des valeurs singulières de la matrice P.*sqrt(M)
   tol         = max(M.shape)*sing_values[0]*np.finfo(float).eps  # Calcul de la tolérance à utiliser pour la matrice P*sqrt(M)
   ind_nonzero = np.where(sing_values > tol)[0]                   # indices des valeurs > tolérance
+  if len(ind_nonzero) == 0:
+    return 0,0
   return len(ind_nonzero), sing_values[ind_nonzero[-1]]          # outputs: objectif1=rang, objectif2=plus petite val sing. non-nulle
 
 def compareP1betterthanP2(M,P1,P2):

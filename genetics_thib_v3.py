@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 from opti_combi_projet_pythoncode_texte import fobj,compareP1betterthanP2,matrices1_ledm,matrices2_slackngon
-from utils import LEDM,lire_fichier,random_matrix,pat_ledm
+from utils import LEDM,lire_fichier,random_matrix,pat_ledm, get_pc_name
 import utils
 from sklearn.decomposition import PCA
 
@@ -744,7 +744,7 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
         pattern_tmp=funct(matrix,pattern_tmp,param[1],param[2],verbose)
         return (pattern_tmp,param)
 
-def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
+def VNS(M,n_clusters,voisinage, kmax,matrix_name=None, max_depth = 10, init = None):
     if init is None:
         line_labels = clustering_lines(M, n_clusters)
         col_labels = clustering_columns(M, n_clusters)
@@ -755,7 +755,10 @@ def VNS(M,n_clusters,voisinage,kmax,max_depth = 10, init = None):
         init_matrix = init.copy()
     voisinage_index = 0
     best_matrix = init_matrix.copy()
-    utils.ecrire_fichier("solution.txt",M,best_matrix)
+    if mat_name != None:
+        utils.ecrire_fichier(matrix_name,M,best_matrix)
+    else:
+        utils.ecrire_fichier("solution.txt",M,best_matrix)
     n_not_best = 1
     for i in range(kmax):
         if voisinage_index == 0:
@@ -882,8 +885,8 @@ def Johanmethod(matrix, debug = True,best_param = False,pattern = None):
     metah=0 #0 for greedy, 1 for tabu, 2 for local search
     matrix = matrix
     if pattern == None:
-        #pattern=np.ones(matrix.shape)
-        pattern=np.random.choice([-1,1],size=matrix.shape)
+        pattern=np.ones(matrix.shape)
+        #pattern=np.random.choice([-1,1],size=matrix.shape)
     else:
         pattern = pattern
     if best_param:
@@ -963,17 +966,31 @@ def Clustermethod(M, n_clusters):
     return cluster
 
 if __name__=="__main__":
-    M = LEDM(32,32)
+    mat_name = "correl5_matrice"
+    save_name = f"{mat_name}-{get_pc_name()}-{int(time.time()*1000)}.txt"
+    print(f"va etre sauvegarder sous le nom {save_name}")
+    import os
+    print(os.getcwd())
+    M = utils.lire_fichier(f"./data/{mat_name}.txt")
     list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
+    evolution_rank = np.zeros((5,2)) #taille initial, init johan, génétique 1, génétique 2, VNS
+    methode_utilisee = ["initial", "initialisation johan", "génétique simple", "génétique avec parent", "VNS"]
+    evolution_rank[0] = [np.min(M.shape),-1]
+
     import time
     a = time.time()
     liste_method = []
     print("Start Johan")
-    johan_method = Johanmethod(best_param=False, matrix=M)
+    johan_method = Johanmethod(best_param=True, matrix=M)
+    evolution_rank[1] = fobj(M, johan_method)
     print(fobj(M,johan_method))
+
     print("Start Genetique")
     genetique_method = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
+    evolution_rank[2] = fobj(M, genetique_method)
+
     print(fobj(M,genetique_method))
+
     cluster_method = Clustermethod(M,n_clusters=2)
     print(fobj(M,cluster_method))
     liste_method.append(johan_method)
@@ -989,10 +1006,50 @@ if __name__=="__main__":
     genetique_matrix = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
     print(fobj(M,genetique_matrix ))
 
+    evolution_rank[3] = fobj(M, genetique_matrix)
 
-    VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix)
+
+    VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix, matrix_name=save_name)
+    print(f"sauvegarder sous le nom {save_name}")
+
+    evolution_rank[4] = fobj(M, VNS_matrix)
+
+    #affichage
+    #en gros va map l'interval [min; max] dans [-0.5;0.5] pour que soit un minimum visible
+    minValue = 99999
+    maxValue = 1e-18
+    for i,j in evolution_rank:
+        if j>0:
+            minValue = j if minValue>j else minValue
+            maxValue = j if maxValue<j else maxValue
+
+    print(minValue, maxValue)
+    score = np.zeros(evolution_rank.shape[0])
+    c= 0
+    for i,j in evolution_rank:
+        if j>0:
+            score[c] = i + (-0.5 + (np.log10(j)-np.log10(minValue))/(np.log10(maxValue)-np.log10(minValue)))
+        else:
+            score[c] = i+0.5 #si pas de valeur définir comme init met au max
+        c+=1
+
+    print(evolution_rank)
+    print(score)
     print(fobj(M,VNS_matrix))
     print(f"And Johan was {fobj(M,johan_method)}")
+    
+    
+    plt.figure(figsize=(12, 8))
+    
+    plt.bar(methode_utilisee, score)
+    plt.xticks(rotation=90)
+    plt.xlabel("methode utilisée")
+    plt.ylabel("rang")
+    plt.title(f"Evolution du rang obtenu en fonction des étapes de l'heuristique pour la matrice {mat_name}")
+    
+    plt.tight_layout()
+    plt.show()
+
 
 
 def run(Mat):
@@ -1021,7 +1078,7 @@ def run(Mat):
     print(fobj(Mat,genetique_matrix ))
 
 
-    VNS_matrix = VNS(Mat,2,0,1000,max_depth = 10,init = genetique_matrix)
+    VNS_matrix = VNS(Mat,2,0,1000,max_depth = 10,init = genetique_matrix, matrix_name=mat_name)
     print(fobj(Mat,VNS_matrix))
     print(f"And Johan was {fobj(Mat,johan_method)}")
     return VNS_matrix #return la meilleur matrice

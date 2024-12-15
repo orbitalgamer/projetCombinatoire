@@ -19,8 +19,9 @@ def lire_fichier(file):
 def ecrire_fichier(file,matrix,P):
     def fobj2(M,P,tol=1e-14):
       sing_values = np.linalg.svd(P*np.sqrt(M), compute_uv=False)
-    #   ind_nonzero = np.where(sing_values > tol)[0]                
-      return sing_values  
+      tol         = max(M.shape)*sing_values[0]*np.finfo(float).eps  # Calcul de la tolérance à utiliser pour la matrice P*sqrt(M)
+      ind_nonzero = np.where(sing_values > tol)[0]                  
+      return sing_values[ind_nonzero]
   
     
     with open(file, "w") as f:
@@ -99,3 +100,11 @@ def pat_ledm(M):
             if middle:
                 pat[i][j]*=-1
     return pat
+
+import os
+
+def get_pc_name(): #pour mettre dans le nom que écrit
+    nom_pc = os.environ.get('COMPUTERNAME') or os.environ.get('HOSTNAME')
+    if not nom_pc and hasattr(os, 'uname'):
+        nom_pc = os.uname().nodename
+    return nom_pc
