@@ -487,6 +487,11 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
         return (pattern_tmp,param)
 
 def VNS(M,n_clusters,voisinage, kmax,matrix_name=None, max_depth = 10, init = None):
+    #initialise à 0
+    dico_ameliration = dict()
+    for i in range(6):
+        dico_ameliration[i]=0
+    
     if init is None:
         line_labels = clustering_lines(M, n_clusters)
         col_labels = clustering_columns(M, n_clusters)
@@ -541,12 +546,13 @@ def VNS(M,n_clusters,voisinage, kmax,matrix_name=None, max_depth = 10, init = No
             n_not_best = 1
             print(f"improve by voisinage {voisinage_index}")
             utils.ecrire_fichier("solution.txt",M,best_matrix)
+            dico_ameliration[voisinage_index]+=1
         else:
             init_matrix = best_matrix.copy()
             if n_clusters < 150:
                 n_not_best += 1
         voisinage_index = (voisinage_index+1)%6
-    return best_matrix
+    return best_matrix, dico_ameliration
             
 def recherche_kmins(M,n_clusters,max_iter):
     line_labels = clustering_lines(M, n_clusters)
@@ -589,36 +595,60 @@ def GenerationParents(M,nombre,methods):
             liste_parent.pop()
     return liste_parent
 
-def Johanmethod(matrix, debug = True,best_param = False,pattern = None):
+def Johanmethod(matrix, debug = True,best_param = False,pattern = None, random_search=True):
     debug=debug
     best_param=best_param
     metah=0 #0 for greedy, 1 for tabu, 2 for local search
     matrix = matrix
-    if pattern == None:
-        pattern=np.ones(matrix.shape)
-        #pattern=np.random.choice([-1,1],size=matrix.shape)
-        pattern=np.ones(matrix.shape)
-        #pattern=np.random.choice([-1,1],size=matrix.shape)
-    else:
-        pattern = pattern
+    # if pattern == None:
+    #     pattern=np.ones(matrix.shape)
+    #     #pattern=np.random.choice([-1,1],size=matrix.shape)
+    # else:
+    pattern = pattern
     if best_param:
         #determination meilleur parametre
         start_time=time.time()
         pattern_best=copy.deepcopy(pattern)
         if metah==0:
-            la_totale=[False,True]
-            setup_break=range(4)
-            size=range(2,max(matrix.shape)+1)
-            param=itertools.product(la_totale,setup_break,size)
-            data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(greedy,matrix,pattern,(i[2],i[1],i[0])) for i in param)
-            for (pattern_tmp,p) in data:
-                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
-                    pattern_best=copy.deepcopy(pattern_tmp)
-                    size_best=p[0]
-                    setup_break_best=p[1]
-                    la_totale_best=p[2]
-                    print(f"for param size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
-                    
+            if not random_search:
+                la_totale=[False,True]
+                setup_break=range(4)
+                size=range(2,max(matrix.shape)+1)
+                param=itertools.product(la_totale,setup_break,size)
+                data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(greedy,matrix,pattern,(i[2],i[1],i[0])) for i in param)
+                for (pattern_tmp,p) in data:
+                    if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                        pattern_best=copy.deepcopy(pattern_tmp)
+                        size_best=p[0]
+                        setup_break_best=p[1]
+                        la_totale_best=p[2]
+                        print(f"for param size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+                        
+            else:
+                #recherche aléatoire pour limiter nombre de test qu'on fait
+                la_totale=[False,True]
+                setup_break=range(1)
+                size=range(2,35)
+                param=itertools.product(la_totale,setup_break,size)
+
+                nombreDeTest = 50 if 50>len(la_totale)*len(setup_break)*len(size) else len(la_totale)*len(setup_break)*len(size)
+
+                indTest = set(np.random.choice(len(la_totale)*len(setup_break)*len(size), 50, replace=False))
+                testsur =[]
+                for i,j in enumerate(param):
+                    if i in indTest:
+                        testsur.append(j)
+
+
+                data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(greedy,matrix,pattern,(i[2],i[1],i[0])) for i in testsur)
+                for (pattern_tmp,p) in data:
+                    if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                        pattern_best=copy.deepcopy(pattern_tmp)
+                        size_best=p[0]
+                        setup_break_best=p[1]
+                        la_totale_best=p[2]
+                        print(f"for param size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+            
             print(f"param opti: size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best}")
         elif metah==1:
             queue=range(1,11)
@@ -654,7 +684,7 @@ def Johanmethod(matrix, debug = True,best_param = False,pattern = None):
     if debug:
         start_time=time.time()
         if not best_param:
-            size_best=15
+            size_best=7
             setup_break_best=0 #0,1,2 or 3
             la_totale_best=True #True or False
         if metah==0:
@@ -674,53 +704,52 @@ def Clustermethod(M, n_clusters):
     return cluster
 
 if __name__=="__main__":
-    mat_name = "correl5_matrice"
+    mat_name = "LEDM 32 x 25"
     save_name = f"{mat_name}-{get_pc_name()}-{int(time.time()*1000)}.txt"
     print(f"va etre sauvegarder sous le nom {save_name}")
     import os
     print(os.getcwd())
-    M = utils.lire_fichier(f"./data/{mat_name}.txt")
+    # M = utils.lire_fichier(f"./data/{mat_name}.txt")
+    M = LEDM(30,25)
+
+    #param johan
+    best_Param = True #pour calculer best_param
+    random_parm = False #pour rehcercher les param par random bien pout >30 en taille car ainsi reste calculable
+    #choix matrice de base
+    pat_johan_init=np.ones(M.shape)
+    #pat_johan_init=np.random.choice([-1,1],size=M.shape)
+
+    #param VNS
+    nbr_cluster = 2 #nombre de cluster pour quand lance init kmeans mais osef si init avec johan
+    voisinage  = 0 #je sais pas ce que représente
+    maxIteration = 1000 #nombre d'itération que fait
+    max_depth = 10 #aucune idée à quoi correspond
+    
+    
     list_cross = [cross_by_half_split,cross_by_vertical_split,cross_by_alternating_rows,cross_by_alternating_line,cross_by_blocks]
-    evolution_rank = np.zeros((5,2)) #taille initial, init johan, génétique 1, génétique 2, VNS
-    methode_utilisee = ["initial", "initialisation johan", "génétique simple", "génétique avec parent", "VNS"]
+    evolution_rank = np.zeros((3,2)) #taille initial, init johan, génétique 1, génétique 2, VNS
+    methode_utilisee = ["initial", "initialisation johan", "VNS"]
     evolution_rank[0] = [np.min(M.shape),-1]
 
     import time
     a = time.time()
     liste_method = []
     print("Start Johan")
-    johan_method = Johanmethod(best_param=True, matrix=M)
+    johan_method = Johanmethod(best_param=True, matrix=M, pattern=pat_johan_init, random_search=random_parm)
     evolution_rank[1] = fobj(M, johan_method)
     print(fobj(M,johan_method))
 
-    print("Start Genetique")
-    genetique_method = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
-    evolution_rank[2] = fobj(M, genetique_method)
-
-    print(fobj(M,genetique_method))
-
-    cluster_method = Clustermethod(M,n_clusters=2)
-    print(fobj(M,cluster_method))
-    liste_method.append(johan_method)
-    liste_method.append(genetique_method)
-    liste_method.append(cluster_method)
-    liste_method.append(np.ones(M.shape))
-    liste_method.append(np.ones(M.shape)*(-1))
-
-    parents = GenerationParents(M,100,liste_method)
-    temp = [None]
-    temp.append(parents)
-    parents = temp
-    genetique_matrix = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
-    print(fobj(M,genetique_matrix ))
-
-    evolution_rank[3] = fobj(M, genetique_matrix)
 
 
-    VNS_matrix = VNS(M,2,0,1000,max_depth = 10,init = genetique_matrix, matrix_name=save_name)
+    VNS_matrix, dico = VNS(M,nbr_cluster,voisinage,maxIteration,max_depth = max_depth,init = johan_method.copy(), matrix_name=save_name)
     print(f"sauvegarder sous le nom {save_name}")
 
-    evolution_rank[4] = fobj(M, VNS_matrix)
+    if save_name != None:
+        utils.ecrire_fichier(save_name,M,VNS_matrix)
+    else:
+        utils.ecrire_fichier("solution.txt",M,VNS_matrix)
+
+    evolution_rank[2] = fobj(M, VNS_matrix)
 
     #affichage
     #en gros va map l'interval [min; max] dans [-0.5;0.5] pour que soit un minimum visible
@@ -734,17 +763,21 @@ if __name__=="__main__":
     print(minValue, maxValue)
     score = np.zeros(evolution_rank.shape[0])
     c= 0
-    for i,j in evolution_rank:
-        if j>0:
-            score[c] = i + (-0.5 + (np.log10(j)-np.log10(minValue))/(np.log10(maxValue)-np.log10(minValue)))
-        else:
-            score[c] = i+0.5 #si pas de valeur définir comme init met au max
-        c+=1
+    if minValue != maxValue:
+        for i,j in evolution_rank:
+            if j>0:
+                score[c] = i + (-0.5 + (np.log10(j)-np.log10(minValue))/(np.log10(maxValue)-np.log10(minValue)))
+            else:
+                score[c] = i+0.5 #si pas de valeur définir comme init met au max
+            c+=1
+    else:
+        score=evolution_rank[:,0]
 
     print(evolution_rank)
     print(score)
     print(fobj(M,VNS_matrix))
     print(f"And Johan was {fobj(M,johan_method)}")
+    
     
     
     plt.figure(figsize=(12, 8))
@@ -754,9 +787,20 @@ if __name__=="__main__":
     plt.xlabel("methode utilisée")
     plt.ylabel("rang")
     plt.title(f"Evolution du rang obtenu en fonction des étapes de l'heuristique pour la matrice {mat_name}")
+    print(dico)
     
     plt.tight_layout()
     plt.show()
+    plt.savefig(f"plot {save_name}", format='png')
+
+    plt.figure(figsize=(12, 8))
+    plt.bar(dico.keys(), dico.values())
+    plt.xlabel("voisinage exploré")
+    plt.ylabel("utilisations")
+    plt.title(f"Voisinage exploré lors de l'exécution du VNS sur la matrice {mat_name}")
+    plt.show()
+    plt.savefig(f"plot VNS {save_name}", format='png')
+
 
 
 
@@ -790,3 +834,27 @@ def run(Mat):
     print(fobj(Mat,VNS_matrix))
     print(f"And Johan was {fobj(Mat,johan_method)}")
     return VNS_matrix #return la meilleur matrice
+
+#lancement génétique thibaut si nécessaire
+  # print("Start Genetique")
+    # genetique_method = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=None,method_next_gen="Tournament_pro")
+    # evolution_rank[2] = fobj(M, genetique_method)
+
+    # print(fobj(M,genetique_method))
+
+    # cluster_method = Clustermethod(M,n_clusters=2)
+    # print(fobj(M,cluster_method))
+    # liste_method.append(johan_method)
+    # liste_method.append(genetique_method)
+    # liste_method.append(cluster_method)
+    # liste_method.append(np.ones(M.shape))
+    # liste_method.append(np.ones(M.shape)*(-1))
+
+    # parents = GenerationParents(M,100,liste_method)
+    # temp = [None]
+    # temp.append(parents)
+    # parents = temp
+    # genetique_matrix = genetique(M,2,0,list_cross,0.20,False,1000,max_depth=5  ,n_parents = 100,parent_init=parents,method_next_gen="Tournament")
+    # print(fobj(M,genetique_matrix ))
+
+    # evolution_rank[3] = fobj(M, genetique_matrix)

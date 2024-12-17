@@ -1,6 +1,8 @@
 import numpy as np
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
+import random
+from scipy.sparse import random, csr_matrix
 
 def lire_fichier(file):
     with open(file, 'r') as f:
@@ -47,9 +49,30 @@ def LEDM (n,m):
     return M
 
 
-def random_matrix(m:int ,n: int, r:int):
+def random_matrix(m ,n, r):
+    matrix_mr = np.random.rand(m, r)
+    matrix_rn = np.random.rand(r, n)
 
-    return ((np.random.rand(m,r)*10)@(np.random.rand(r,n)*10))**2
+    # Generate random masks with values between -1 and 1
+    mask_mr = np.random.uniform(-1, 1, (m, r))
+    mask_rn = np.random.uniform(-1, 1, (r, n))
+
+    # Apply the masks
+    masked_mr = matrix_mr * mask_mr
+    masked_rn = matrix_rn * mask_rn
+
+    # Perform the matrix multiplication and element-wise power
+    base_line = (masked_mr @ masked_rn) ** 2
+    return base_line
+
+
+
+def sparse_random_matrix(m:int ,n: int, r:int, density : float):
+    U = random(m, r, density=density, format='csr', data_rvs=np.random.rand)
+    V = random(r, n, density=density, format='csr', data_rvs=np.random.rand)
+
+    Mat = (U @ V)
+    return (10*Mat.toarray())**2
 
 
 def optimal_k(M, max_k=5):

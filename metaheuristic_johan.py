@@ -194,9 +194,10 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 # matrix=utils.lire_fichier("data/ledm6_matrice (1).txt")
 # matrix=utils.lire_fichier("data/correl5_matrice.txt")
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
+matrix=utils.lire_fichier("data/file.txt")
 # matrix=matrices2_slackngon(5)
-matrix=utils.LEDM (32,32)
-# matrix=utils.random_matrix(120,120,2)
+# matrix=utils.LEDM (120,120)
+# matrix=utils.random_matrix(30,30,10)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
 pattern=np.ones(matrix.shape)
@@ -205,29 +206,58 @@ pattern=np.ones(matrix.shape)
 print(fobj(matrix,pattern))
 
 debug=True
-best_param=True
+best_param=True 
+random_choice = True
 metah=0 #0 for greedy, 1 for tabu, 2 for local search
 
+
+start_time_parm = time.time()
 
 if best_param:
     #determination meilleur parametre
     start_time=time.time()
     pattern_best=copy.deepcopy(pattern)
     if metah==0:
-        la_totale=[False,True]
-        setup_break=range(4)
-        size=range(2,max(matrix.shape)+1)
-        param=itertools.product(la_totale,setup_break,size)
-        data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(greedy,matrix,pattern,(i[2],i[1],i[0])) for i in param)
-        df=pd.DataFrame(([(fobj(matrix,data[i][0])[0],fobj(matrix,data[i][0])[1],data[i][1][0],data[i][1][1],data[i][1][2]) for i in range(len(data))]),columns=['rank','sing_value','size','setup_break','la_totale'])
-        df.to_csv('Evolution_selon_param_greedy.csv',index=False)
-        for (pattern_tmp,p) in data:
-            if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
-                pattern_best=copy.deepcopy(pattern_tmp)
-                size_best=p[0]
-                setup_break_best=p[1]
-                la_totale_best=p[2]
-                print(f"for param size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+        if not random_choice:
+            la_totale=[False,True]
+            setup_break=range(4)
+            size=range(2,max(matrix.shape)+1)
+            param=itertools.product(la_totale,setup_break,size)
+            data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(greedy,matrix,pattern,(i[2],i[1],i[0])) for i in param)
+            df=pd.DataFrame(([(fobj(matrix,data[i][0])[0],fobj(matrix,data[i][0])[1],data[i][1][0],data[i][1][1],data[i][1][2]) for i in range(len(data))]),columns=['rank','sing_value','size','setup_break','la_totale'])
+            df.to_csv('Evolution_selon_param_greedy.csv',index=False)
+            for (pattern_tmp,p) in data:
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                    pattern_best=copy.deepcopy(pattern_tmp)
+                    size_best=p[0]
+                    setup_break_best=p[1]
+                    la_totale_best=p[2]
+                    print(f"for param size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+        else:
+            #recherche aléatoire pour limiter nombre de test qu'on fait
+            la_totale=[False,True]
+            setup_break=range(1)
+            size=range(2,35)
+            param=itertools.product(la_totale,setup_break,size)
+
+            nombreDeTest = 50 if 50>len(la_totale)*len(setup_break)*len(size) else len(la_totale)*len(setup_break)*len(size)
+
+            indTest = set(np.random.choice(len(la_totale)*len(setup_break)*len(size), 50, replace=False))
+            testsur =[]
+            for i,j in enumerate(param):
+                if i in indTest:
+                    testsur.append(j)
+
+
+            data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(greedy,matrix,pattern,(i[2],i[1],i[0])) for i in testsur)
+            for (pattern_tmp,p) in data:
+                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
+                    pattern_best=copy.deepcopy(pattern_tmp)
+                    size_best=p[0]
+                    setup_break_best=p[1]
+                    la_totale_best=p[2]
+                    print(f"for param size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
+
                 
         print(f"param opti: size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best}")
     elif metah==1:
@@ -263,12 +293,14 @@ if best_param:
     print(fobj(matrix,pattern_best))
     print(f"temps de calcul pour trouve param opti= {time.time()-start_time}s")
 
+end_time_para = time.time()
+
 if debug:
     start_time=time.time()
     if not best_param:
-        size_best=2
+        size_best=15
         setup_break_best=0 #0,1,2 or 3
-        la_totale_best=False #True or False
+        la_totale_best=True #True or False
     if metah==0:
         (pattern_tmp,p)=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale_best),verbose=True)
     elif metah==1:
@@ -279,6 +311,8 @@ if debug:
     print(fobj(matrix,pattern_tmp))
     print(f"temps de calcul pour calculer solution= {end_time-start_time}s")
     print(f"param size={size_best} setup_break={setup_break_best} and la_totale={la_totale_best}")
+
+    print(f"a pris {end_time_para-start_time_parm} s pour trouver les param")
 
 utils.ecrire_fichier("solution.txt",matrix,pattern_tmp)
 
