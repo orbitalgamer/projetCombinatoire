@@ -380,6 +380,34 @@ def cross_by_elem_1_2(parents):
     random.shuffle(enfants)
     return enfants
 
+def uniform_crossover(parents):
+    # Liste pour stocker les enfants
+    enfants = []
+    
+    # Itérer sur les paires de parents dans la liste
+    for i in range(0, len(parents), 2):
+        parent1 = parents[i]
+        parent2 = parents[i + 1]
+        
+        # Vérifier que les parents ont la même forme
+        if parent1.shape != parent2.shape:
+            raise ValueError("Les dimensions des deux parents doivent être identiques.")
+        
+        # Générer un masque binaire aléatoire de la même forme que les parents
+        mask = np.random.randint(2, size=parent1.shape)
+        
+        # Créer les enfants en fonction du masque
+        enfant1 = np.where(mask == 1, parent1, parent2)
+        enfant2 = np.where(mask == 0, parent1, parent2)
+        
+        # Ajouter les enfants à la liste des enfants
+        enfants.append(enfant1)
+        enfants.append(enfant2)
+    
+    return enfants
+
+
+
 def perm(type: int,mat:np.ndarray,index: int,index2=None):
     mat_tmp=copy.deepcopy(mat)
     if type==0: #Voisinnage multiplie un terme par -1
