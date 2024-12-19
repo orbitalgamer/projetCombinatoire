@@ -456,29 +456,37 @@ def greedy(matrix,pattern,setup_break,la_totale,verbose=False):
                     counter=0
                     if setup_break==1 or setup_break==3:break
             for i in range(matrix.shape[0]):
+                better = False
                 for j in range(i,matrix.shape[0]):    
                     pattern_tmp=perm(3,pattern,i,j)
                     if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                        better = True
                         pattern=copy.deepcopy(pattern_tmp)
                         if verbose:
                             print(f"3 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
                         counter=0
                         if setup_break==1 or setup_break==3:break
                 else:
+                    if better and setup_break == 2:
+                        break
                     continue
-                if setup_break==2 or setup_break==3:break
+                if setup_break==3:break
             for i in range(matrix.shape[1]):
+                better = False
                 for j in range(i,matrix.shape[1]):    
                     pattern_tmp=perm(4,pattern,i,j)
                     if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                        better = True
                         pattern=copy.deepcopy(pattern_tmp)
                         if verbose:
                             print(f"4 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
                         counter=0
                         if setup_break==1 or setup_break==3:break
                 else:
+                    if better and setup_break == 2:
+                        break
                     continue
-                if setup_break==2 or setup_break==3:break
+                if setup_break==3:break
     return pattern
 
 def subdivise_mat(mat,size):
@@ -514,7 +522,7 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
         pattern_tmp=funct(matrix,pattern_tmp,param[1],param[2],verbose)
         return (pattern_tmp,param)
 
-def VNS(M,n_clusters,voisinage, kmax,matrix_name=None, max_depth = 10, init = None):
+def VNS(M,n_clusters,voisinage, kmax,matrix_name=None, max_depth = 10, init = None, val = 0.33):
     #initialise à 0
     dico_ameliration = dict()
     for i in range(6):
@@ -537,35 +545,35 @@ def VNS(M,n_clusters,voisinage, kmax,matrix_name=None, max_depth = 10, init = No
     n_not_best = 1
     for i in range(kmax):
         if voisinage_index == 0:
-            for _ in range(int(n_not_best**0.33)):
+            for _ in range(int(n_not_best**val)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
         elif voisinage_index == 1:
-            for _ in range(int(n_not_best**0.33)):
+            for _ in range(int(n_not_best**val)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[-n1,-n2] = -init_matrix[-n1,-n2]
         elif voisinage_index == 2:
-            for _ in range(int(n_not_best**0.33)):
+            for _ in range(int(n_not_best**val)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[-n1,n2] = -init_matrix[-n1,n2]
         elif voisinage_index == 3:
-            for _ in range(int(n_not_best**0.33)):
+            for _ in range(int(n_not_best**val)):
                 n1,n2 = random.randint(0, len(M)-1),random.randint(0, len(M[1])-1)
                 init_matrix[n1,n2] = -init_matrix[n1,n2]
                 init_matrix[n1,-n2] = -init_matrix[n1,-n2]
         elif voisinage_index == 4:
-            for _ in range(int(n_not_best**0.33)):
+            for _ in range(int(n_not_best**val)):
                 l = random.randint(0,init_matrix.shape[0]-1)
                 init_matrix[l,:] = -init_matrix[l,:]
         elif voisinage_index == 5:
-            for _ in range(int(n_not_best**0.33)):
+            for _ in range(int(n_not_best**val)):
                 c = random.randint(0,init_matrix.shape[1]-1)
                 init_matrix[:,c] = -init_matrix[:,c]
         
         
-        init_matrix = greedy(M,init_matrix,0,False)
+        init_matrix = greedy(M,init_matrix,0,True)
 
         
         print(f"iteration {i}")
@@ -678,32 +686,6 @@ def Johanmethod(matrix, debug = True,best_param = False,pattern = None, random_s
                         print(f"for param size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
             
             print(f"param opti: size={size_best}, setup_break={setup_break_best} and la_totale={la_totale_best}")
-        elif metah==1:
-            queue=range(1,11)
-            size=range(2,max(matrix.shape)+1)
-            param=itertools.product(queue,size)
-            data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(tabu,matrix,pattern,(i[1],i[0])) for i in param)
-            for (pattern_tmp,p) in data:
-                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
-                    pattern_best=copy.deepcopy(pattern_tmp)
-                    size_best=p[0]
-                    queue_best=p[1]
-                    print(f"for param size={size_best} and queue={queue_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
-            
-            print(f"param opti: size={size_best} and queue={queue_best}")
-        elif metah==2:
-            la_totale=[False,True]
-            size=range(2,max(matrix.shape)+1)
-            param=itertools.product(la_totale,size)
-            data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(recherche_locale,matrix,pattern,(i[1],i[0])) for i in param)
-            for (pattern_tmp,p) in data:
-                if compareP1betterthanP2(matrix,pattern_tmp,pattern_best):
-                    pattern_best=copy.deepcopy(pattern_tmp)
-                    size_best=p[0]
-                    la_totale_best=p[1]
-                    print(f"for param size={size_best} and la_totale={la_totale_best} rank: {fobj(matrix,pattern_best)[0]}, valeur min: {fobj(matrix,pattern_best)[1]}")
-            print(f"param opti: size={size_best} and la_totale={la_totale_best}")
-
         print(fobj(matrix,pattern_best))
 
         end_time=time.time()
@@ -712,7 +694,7 @@ def Johanmethod(matrix, debug = True,best_param = False,pattern = None, random_s
     if debug:
         start_time=time.time()
         if not best_param:
-            size_best=7
+            size_best=10
             setup_break_best=0 #0,1,2 or 3
             la_totale_best=True #True or False
         if metah==0:
@@ -732,13 +714,13 @@ def Clustermethod(M, n_clusters):
     return cluster
 
 if __name__=="__main__":
-    mat_name = "LEDM 32 x 25"
+    mat_name = "correl5_matrice"
     save_name = f"{mat_name}-{get_pc_name()}-{int(time.time()*1000)}.txt"
     print(f"va etre sauvegarder sous le nom {save_name}")
     import os
     print(os.getcwd())
-    # M = utils.lire_fichier(f"./data/{mat_name}.txt")
-    M = LEDM(30,25)
+    #M = utils.lire_fichier(f"./data/{mat_name}.txt")
+    M = LEDM(30,30)
 
     #param johan
     best_Param = True #pour calculer best_param
@@ -763,13 +745,13 @@ if __name__=="__main__":
     a = time.time()
     liste_method = []
     print("Start Johan")
-    johan_method = Johanmethod(best_param=True, matrix=M, pattern=pat_johan_init, random_search=random_parm)
+    johan_method = Johanmethod(best_param=best_Param, matrix=M, pattern=pat_johan_init, random_search=random_parm)
     evolution_rank[1] = fobj(M, johan_method)
     print(fobj(M,johan_method))
 
 
 
-    VNS_matrix, dico = VNS(M,nbr_cluster,voisinage,maxIteration,max_depth = max_depth,init = johan_method.copy(), matrix_name=save_name)
+    VNS_matrix, dico = VNS(M,nbr_cluster,voisinage,maxIteration,max_depth = max_depth,init = johan_method.copy(), matrix_name=save_name,val = 0.33)
     print(f"sauvegarder sous le nom {save_name}")
 
     if save_name != None:
