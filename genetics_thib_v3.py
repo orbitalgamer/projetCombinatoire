@@ -456,29 +456,37 @@ def greedy(matrix,pattern,setup_break,la_totale,verbose=False):
                     counter=0
                     if setup_break==1 or setup_break==3:break
             for i in range(matrix.shape[0]):
+                better = False
                 for j in range(i,matrix.shape[0]):    
                     pattern_tmp=perm(3,pattern,i,j)
                     if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                        better = True
                         pattern=copy.deepcopy(pattern_tmp)
                         if verbose:
                             print(f"3 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
                         counter=0
                         if setup_break==1 or setup_break==3:break
                 else:
+                    if better and setup_break == 2:
+                        break
                     continue
-                if setup_break==2 or setup_break==3:break
+                if setup_break==3:break
             for i in range(matrix.shape[1]):
+                better = False
                 for j in range(i,matrix.shape[1]):    
                     pattern_tmp=perm(4,pattern,i,j)
                     if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                        better = True
                         pattern=copy.deepcopy(pattern_tmp)
                         if verbose:
                             print(f"4 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
                         counter=0
                         if setup_break==1 or setup_break==3:break
                 else:
+                    if better and setup_break == 2:
+                        break
                     continue
-                if setup_break==2 or setup_break==3:break
+                if setup_break==3:break
     return pattern
 
 def subdivise_mat(mat,size):
