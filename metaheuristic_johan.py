@@ -226,7 +226,7 @@ if best_param:
     if metah==0:
         if not random_choice:
             la_totale=[False,True]
-            setup_break=range(2,3)
+            setup_break=range(4)
             size=range(2,max(matrix.shape)+1)
             param=itertools.product(la_totale,setup_break,size)
             data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(greedy,matrix,pattern,(i[2],i[1],i[0])) for i in param)
