@@ -635,7 +635,7 @@ def GenerationParents(M,nombre,methods):
             liste_parent.pop()
     return liste_parent
 
-def Johanmethod(matrix, debug = True,best_param = False,pattern = None, random_search=True):
+def Johanmethod(matrix, debug = True,best_param = False,pattern = None, random_search=True,matrix_name = "best_param"):
     debug=debug
     best_param=best_param
     metah=0 #0 for greedy, 1 for tabu, 2 for local search
@@ -698,9 +698,9 @@ def Johanmethod(matrix, debug = True,best_param = False,pattern = None, random_s
     if debug:
         start_time=time.time()
         if not best_param:
-            size_best=10
+            size_best=2
             setup_break_best=0 #0,1,2 or 3
-            la_totale_best=True #True or False
+            la_totale_best=False #True or False
         if metah==0:
             (pattern_tmp,p)=Resolve_metaheuristic(greedy,matrix,pattern,(size_best,setup_break_best,la_totale_best),verbose=True)
         end_time=time.time()
@@ -717,8 +717,19 @@ def Clustermethod(M, n_clusters):
     cluster = generate_initial_P(M, line_labels, col_labels)
     return cluster
 
+def read_old_sol(fichier):
+    matrice = []
+    with open(fichier, 'r') as f:
+        for ligne in f:
+            elements = ligne.split()
+            if all(e.replace('-', '').isdigit() for e in elements):
+                matrice.append(list(map(int, elements)))
+            else:
+                break
+    return np.array(matrice)
+
 if __name__=="__main__":
-    mat_name = "correl5_matrice"
+    mat_name = "MARO011_challenge_moyenne"
     save_name = f"{mat_name}-{get_pc_name()}-{int(time.time()*1000)}.txt"
     print(f"va etre sauvegarder sous le nom {save_name}")
     import os
@@ -727,10 +738,11 @@ if __name__=="__main__":
     #M = LEDM(30,30)
 
     #param johan
-    best_Param = True #pour calculer best_param
+    best_Param = False #pour calculer best_param
     random_parm = False #pour rehcercher les param par random bien pout >30 en taille car ainsi reste calculable
     #choix matrice de base
     pat_johan_init=np.ones(M.shape)
+    pat_johan_init = read_old_sol("MARO011_challenge_moyenne-THIB_PORTABLE-1734612213398.txt")
     #pat_johan_init=np.random.choice([-1,1],size=M.shape)
 
     #param VNS
@@ -749,7 +761,7 @@ if __name__=="__main__":
     a = time.time()
     liste_method = []
     print("Start Johan")
-    johan_method = Johanmethod(best_param=best_Param, matrix=M, pattern=pat_johan_init, random_search=random_parm)
+    johan_method = Johanmethod(best_param=best_Param, matrix=M, pattern=pat_johan_init, random_search=random_parm,matrix_name=save_name)
     evolution_rank[1] = fobj(M, johan_method)
     print(fobj(M,johan_method))
 
