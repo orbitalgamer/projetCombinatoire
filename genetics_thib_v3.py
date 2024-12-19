@@ -581,7 +581,11 @@ def VNS(M,n_clusters,voisinage, kmax,matrix_name=None, max_depth = 10, init = No
             best_matrix = init_matrix.copy()
             n_not_best = 1
             print(f"improve by voisinage {voisinage_index}")
-            utils.ecrire_fichier("solution.txt",M,best_matrix)
+            print(fobj(M,best_matrix))
+            if mat_name != None:
+                utils.ecrire_fichier(matrix_name,M,best_matrix)
+            else:
+                utils.ecrire_fichier("solution.txt",M,best_matrix)
             dico_ameliration[voisinage_index]+=1
         else:
             init_matrix = best_matrix.copy()
@@ -719,8 +723,8 @@ if __name__=="__main__":
     print(f"va etre sauvegarder sous le nom {save_name}")
     import os
     print(os.getcwd())
-    #M = utils.lire_fichier(f"./data/{mat_name}.txt")
-    M = LEDM(30,30)
+    M = utils.lire_fichier(f"./data/{mat_name}.txt")
+    #M = LEDM(30,30)
 
     #param johan
     best_Param = True #pour calculer best_param
@@ -751,7 +755,7 @@ if __name__=="__main__":
 
 
 
-    VNS_matrix, dico = VNS(M,nbr_cluster,voisinage,maxIteration,max_depth = max_depth,init = johan_method.copy(), matrix_name=save_name,val = 0.33)
+    VNS_matrix, dico = VNS(M,nbr_cluster,voisinage,maxIteration,max_depth = max_depth,init = johan_method.copy(), matrix_name=save_name,val = 0.25)
     print(f"sauvegarder sous le nom {save_name}")
 
     if save_name != None:
