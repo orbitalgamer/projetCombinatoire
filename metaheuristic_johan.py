@@ -104,29 +104,35 @@ def greedy(matrix,pattern,setup_break,la_totale,verbose=False):
                     counter=0
                     if setup_break==1 or setup_break==3:break
             for i in range(matrix.shape[0]):
+                better=False
                 for j in range(i,matrix.shape[0]):    
                     pattern_tmp=perm(3,pattern,i,j)
                     if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                        better=True
                         pattern=copy.deepcopy(pattern_tmp)
                         if verbose:
                             print(f"3 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
                         counter=0
                         if setup_break==1 or setup_break==3:break
                 else:
+                    if better and setup_break==2:break
                     continue
-                if setup_break==2 or setup_break==3:break
+                if setup_break==3:break
             for i in range(matrix.shape[1]):
+                better=False
                 for j in range(i,matrix.shape[1]):    
                     pattern_tmp=perm(4,pattern,i,j)
                     if compareP1betterthanP2(matrix,pattern_tmp,pattern):
+                        better=True
                         pattern=copy.deepcopy(pattern_tmp)
                         if verbose:
                             print(f"4 rank: {fobj(matrix,pattern)[0]}, valeur min: {fobj(matrix,pattern)[1]}")
                         counter=0
                         if setup_break==1 or setup_break==3:break
                 else:
+                    if better and setup_break==2:break
                     continue
-                if setup_break==2 or setup_break==3:break
+                if setup_break==3:break
     return pattern
 
 def subdivise_mat(mat,size):
@@ -194,9 +200,9 @@ def Resolve_metaheuristic(funct,matrix,pattern,param,verbose=False):
 # matrix=utils.lire_fichier("data/ledm6_matrice (1).txt")
 # matrix=utils.lire_fichier("data/correl5_matrice.txt")
 # matrix=utils.lire_fichier("data/synthetic_matrice.txt")
-matrix=utils.lire_fichier("data/file.txt")
+# matrix=utils.lire_fichier("data/file.txt")
 # matrix=matrices2_slackngon(5)
-# matrix=utils.LEDM (120,120)
+matrix=utils.LEDM (50,50)
 # matrix=utils.random_matrix(30,30,10)
 
 # pattern=np.random.choice([-1,1],size=matrix.shape)
@@ -207,7 +213,7 @@ print(fobj(matrix,pattern))
 
 debug=True
 best_param=True 
-random_choice = True
+random_choice = False
 metah=0 #0 for greedy, 1 for tabu, 2 for local search
 
 
@@ -220,7 +226,7 @@ if best_param:
     if metah==0:
         if not random_choice:
             la_totale=[False,True]
-            setup_break=range(4)
+            setup_break=range(2,3)
             size=range(2,max(matrix.shape)+1)
             param=itertools.product(la_totale,setup_break,size)
             data=Parallel(n_jobs=-1)(delayed(Resolve_metaheuristic)(greedy,matrix,pattern,(i[2],i[1],i[0])) for i in param)
@@ -236,8 +242,8 @@ if best_param:
         else:
             #recherche aléatoire pour limiter nombre de test qu'on fait
             la_totale=[False,True]
-            setup_break=range(1)
-            size=range(2,35)
+            setup_break=range(4)
+            size=range(2,max(matrix.shape)+1)
             param=itertools.product(la_totale,setup_break,size)
 
             nombreDeTest = 50 if 50>len(la_totale)*len(setup_break)*len(size) else len(la_totale)*len(setup_break)*len(size)
